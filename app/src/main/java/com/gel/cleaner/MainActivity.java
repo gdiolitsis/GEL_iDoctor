@@ -2318,6 +2318,7 @@ applyAppleModeUI();
 private void applyAndroidModeUI() {
 
 hide(R.id.btnAppleDeviceDeclaration);
+hide(R.id.btnAppleTroubleshooting);
 hide(R.id.appleInfoPanel);
 hide(R.id.btnAppleInfoContinue);
 
@@ -2371,6 +2372,10 @@ show(R.id.btnPhoneInfoInternal);
 show(R.id.btnPhoneInfoPeripherals);
 show(R.id.btnDiagnostics);
 show(R.id.btnAppleDeviceDeclaration);
+// The documentation picker is iPhone-model specific; never invent iPad sources.
+if ("iphone".equalsIgnoreCase(getSharedPreferences(PREFS, MODE_PRIVATE)
+        .getString("apple_type", ""))) show(R.id.btnAppleTroubleshooting);
+else hide(R.id.btnAppleTroubleshooting);
 show(R.id.appleInfoPanel);
 show(R.id.btnAppleInfoContinue);
 
@@ -2380,6 +2385,12 @@ if (v instanceof TextView) {
 TextView tv = (TextView) v;
 tv.setText(R.string.diagnostics_apple);
 tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
+}
+View library = findViewById(R.id.btnAppleTroubleshooting);
+if (library instanceof TextView) {
+    ((TextView) library).setText(AppLang.isGreek(this)
+            ? "ΒΙΒΛΙΟΓΡΑΦΙΑ TROUBLESHOOTING ΤΗΣ APPLE ΓΙΑ ΤΟ ΚΙΝΗΤΟ ΣΟΥ"
+            : "APPLE TROUBLESHOOTING GUIDES FOR YOUR IPHONE");
 }
 }
 
@@ -2468,6 +2479,9 @@ private void setupButtons() {
 
 bind(R.id.btnAppleDeviceDeclaration,
 this::showAppleDeviceDeclarationPopup);
+
+bind(R.id.btnAppleTroubleshooting,
+this::showAppleTroubleshootingLibrary);
 
 // ==========================
 // APPLE INFO — OK / CONTINUE TO LABS
@@ -2955,6 +2969,8 @@ String rawModel = models[position];
 String normalizedModel = normalizeAppleModel(rawModel);
 
 saveAppleDevice(type, normalizedModel);
+if ("iphone".equalsIgnoreCase(type)) show(R.id.btnAppleTroubleshooting);
+else hide(R.id.btnAppleTroubleshooting);
 
 TextView btn = findViewById(R.id.btnAppleDeviceDeclaration);
 if (btn != null) {
@@ -3009,6 +3025,218 @@ getSharedPreferences(PREFS, MODE_PRIVATE)
 .putString("apple_type", type)
 .putString("apple_model", model)
 .apply();
+}
+
+// =========================================================
+// APPLE TROUBLESHOOTING LIBRARY — SELECTED IPHONE ONLY
+// This independent documentation browser is not a panic-log diagnosis.
+// =========================================================
+private void showAppleTroubleshootingLibrary() {
+    if (!isAppleMode()) return;
+    final boolean gr = AppLang.isGreek(this);
+    if (GELRemoteTargetManager.isRemoteMode(this)) {
+        GELActionRouter.blockUnsupportedRemote(this,
+                gr ? "Βιβλιογραφία troubleshooting Apple" : "Apple troubleshooting guides");
+        return;
+    }
+
+    SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+    String family = prefs.getString("apple_type", "");
+    String model = prefs.getString("apple_model", "");
+    if (!"iphone".equalsIgnoreCase(family) || model == null || model.trim().isEmpty()) {
+        showAppleReferenceNotice(gr
+                ? "Επίλεξε πρώτα το μοντέλο iPhone από τη Δήλωση Συσκευής Apple."
+                : "First select your iPhone model in Apple Device Declaration.");
+        return;
+    }
+
+    final java.util.List<AppleOfficialServiceGuidance.Guidance> guides;
+    final java.util.List<AppleIPhoneManualChapters.Chapter> chapters;
+    try (java.io.InputStream source = getAssets().open(AppleOfficialServiceGuidance.ASSET)) {
+        guides = AppleOfficialServiceGuidance.parse(source);
+        try (java.io.InputStream index = getAssets().open(AppleIPhoneManualChapters.ASSET)) {
+            chapters = AppleIPhoneManualChapters.parse(index, guides);
+        }
+    } catch (java.io.IOException ex) {
+        showAppleReferenceNotice(gr
+                ? "Δεν φορτώθηκε η επαληθευμένη βιβλιοθήκη Apple."
+                : "Verified Apple documentation could not be loaded.");
+        return;
+    }
+
+    AppleOfficialServiceGuidance.Guidance manual =
+            AppleTroubleshootingLibrary.manualForSelection(guides, family, model);
+    if (manual == null) {
+        showAppleReferenceNotice((gr
+                ? "Δεν υπάρχει ακόμη επιβεβαιωμένο επίσημο εγχειρίδιο στη βιβλιοθήκη για "
+                : "No verified official manual is currently indexed for ") + model
+                + (gr ? ". Δεν θα χρησιμοποιηθεί εγχειρίδιο άλλου μοντέλου."
+                      : ". Another model's manual will not be substituted."));
+        return;
+    }
+
+    final LinearLayout box = newAppleReferenceBox(gr
+            ? "Βιβλιογραφία Apple — " + model
+            : "Apple documentation — " + model);
+    TextView instructions = new TextView(this);
+    instructions.setText(gr ? "Τι θέλεις να διαβάσεις;" : "What would you like to read?");
+    instructions.setTextColor(Color.WHITE);
+    instructions.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+    instructions.setPadding(dp(5), dp(6), dp(5), dp(12));
+    box.addView(instructions);
+
+    final AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(box)
+            .setNegativeButton(gr ? "Κλείσιμο" : "Close", null)
+            .create();
+
+    addAppleReferenceOption(box, gr
+            ? "1. Γενικό επίσημο εγχειρίδιο Apple για το " + model
+            : "1. Full official Apple manual for " + model,
+            () -> {
+                dialog.dismiss();
+                openAppleOfficialLink(manual.sourceUrl);
+            });
+    addAppleReferenceOption(box, gr
+            ? "2. Επίσημο troubleshooting για συγκεκριμένο σύμπτωμα"
+            : "2. Official troubleshooting for a specific symptom",
+            () -> {
+                dialog.dismiss();
+                showAppleTroubleshootingSymptoms(model, manual, chapters, guides);
+            });
+
+    showAppleReferenceDialog(dialog);
+}
+
+private void showAppleTroubleshootingSymptoms(String model,
+        AppleOfficialServiceGuidance.Guidance manual,
+        java.util.List<AppleIPhoneManualChapters.Chapter> chapters,
+        java.util.List<AppleOfficialServiceGuidance.Guidance> guides) {
+    boolean gr = AppLang.isGreek(this);
+    java.util.List<AppleTroubleshootingLibrary.TopicLink> links =
+            AppleTroubleshootingLibrary.topics(manual, chapters, guides);
+    if (links.isEmpty()) {
+        showAppleReferenceNotice(gr
+                ? "Δεν υπάρχουν επαληθευμένα κεφάλαια troubleshooting για αυτό το μοντέλο."
+                : "No verified troubleshooting chapters are indexed for this model.");
+        return;
+    }
+
+    LinearLayout box = newAppleReferenceBox(gr
+            ? "Ποιο πρόβλημα έχει το " + model + ";"
+            : "What issue does your " + model + " have?");
+    TextView question = new TextView(this);
+    question.setText(gr
+            ? "Για ποιο επιμέρους πρόβλημα θέλεις να σου δείξω τον οδηγό της Apple;"
+            : "Which specific problem should the Apple guide cover?");
+    question.setTextColor(Color.WHITE);
+    question.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+    question.setPadding(dp(5), dp(4), dp(5), dp(12));
+    box.addView(question);
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.setFillViewport(false);
+    scroll.setVerticalScrollBarEnabled(true);
+    scroll.addView(box);
+    scroll.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            Math.min(dp(560), (int) (getResources().getDisplayMetrics().heightPixels * 0.70f))));
+
+    final AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(scroll)
+            .setNegativeButton(gr ? "Πίσω" : "Back",
+                    (d, which) -> showAppleTroubleshootingLibrary())
+            .create();
+
+    for (AppleTroubleshootingLibrary.TopicLink item : links) {
+        addAppleReferenceOption(box, item.label(gr), () -> {
+            dialog.dismiss();
+            openAppleOfficialLink(item.url);
+        });
+    }
+    showAppleReferenceDialog(dialog);
+}
+
+private LinearLayout newAppleReferenceBox(String heading) {
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    box.setPadding(dp(14), dp(16), dp(14), dp(14));
+    GradientDrawable background = new GradientDrawable();
+    background.setColor(0xFF080808);
+    background.setCornerRadius(dp(12));
+    background.setStroke(dp(2), 0xFFFFD700);
+    box.setBackground(background);
+
+    TextView title = new TextView(this);
+    title.setText(heading);
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+    title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(dp(5), dp(4), dp(5), dp(12));
+    box.addView(title);
+    return box;
+}
+
+private void addAppleReferenceOption(LinearLayout box, String label, Runnable action) {
+    TextView option = new TextView(this);
+    option.setText(label);
+    option.setContentDescription(label);
+    option.setTextColor(0xFF00FF9C);
+    option.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+    option.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+    option.setGravity(Gravity.CENTER_VERTICAL);
+    option.setPadding(dp(13), dp(12), dp(13), dp(12));
+    option.setMinHeight(dp(56));
+    option.setClickable(true);
+    option.setFocusable(true);
+    GradientDrawable stroke = new GradientDrawable();
+    stroke.setColor(0xFF101010);
+    stroke.setCornerRadius(dp(9));
+    stroke.setStroke(dp(2), 0xFFFFD700);
+    option.setBackground(stroke);
+    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    params.setMargins(dp(2), dp(5), dp(2), dp(5));
+    box.addView(option, params);
+    option.setOnClickListener(v -> action.run());
+}
+
+private void showAppleReferenceDialog(AlertDialog dialog) {
+    dialog.show();
+    if (dialog.getWindow() != null) {
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    }
+    GelButtonLayout.fitDialog(dialog);
+}
+
+private void showAppleReferenceNotice(String message) {
+    final boolean gr = AppLang.isGreek(this);
+    LinearLayout box = newAppleReferenceBox(gr ? "Βιβλιογραφία Apple" : "Apple documentation");
+    TextView text = new TextView(this);
+    text.setText(message);
+    text.setTextColor(Color.WHITE);
+    text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+    text.setPadding(dp(5), dp(8), dp(5), dp(12));
+    box.addView(text);
+    showAppleReferenceDialog(new AlertDialog.Builder(this).setView(box)
+            .setPositiveButton(gr ? "Εντάξει" : "OK", null).create());
+}
+
+private void openAppleOfficialLink(String url) {
+    if (!AppleTroubleshootingLibrary.isOfficialUrl(url)) {
+        showAppleReferenceNotice(AppLang.isGreek(this)
+                ? "Ο σύνδεσμος δεν επαληθεύτηκε ως επίσημη πηγή Apple."
+                : "This link is not verified as an official Apple source.");
+        return;
+    }
+    try {
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+    } catch (android.content.ActivityNotFoundException ex) {
+        showAppleReferenceNotice(AppLang.isGreek(this)
+                ? "Δεν βρέθηκε εφαρμογή για το άνοιγμα του συνδέσμου."
+                : "No app can open this link.");
+    }
 }
 
 // =========================================================
