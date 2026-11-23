@@ -1,5 +1,6 @@
 package com.gel.cleaner;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -79,7 +80,7 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
         buttonParams.setMargins(dp(6), 0, dp(6), dp(6));
         root.addView(back, buttonParams);
-        back.setOnClickListener(v -> finish());
+        back.setOnClickListener(v -> returnToAppleHome());
 
         TextView source = new TextView(this);
         source.setText("support.apple.com"
@@ -149,9 +150,19 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
         // Deliberately do not navigate WebView history: one Back always
         // returns to the Apple home screen with the selected model intact.
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override public void handleOnBackPressed() { finish(); }
+            @Override public void handleOnBackPressed() { returnToAppleHome(); }
         });
         webView.loadUrl(url);
+    }
+
+    private void returnToAppleHome() {
+        // Works whether the source was the main Apple library or Lab 3.
+        // Never lose the saved iPhone model or send the user to a browser.
+        Intent home = new Intent(this, MainActivity.class);
+        home.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        home.putExtra("skip_welcome_once", true);
+        startActivity(home);
+        finish();
     }
 
     @Override
