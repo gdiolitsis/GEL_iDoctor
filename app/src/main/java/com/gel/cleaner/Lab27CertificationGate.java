@@ -25,7 +25,24 @@ final class Lab27CertificationGate {
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
             "1", "2", "3", "4", "5", "6", "7", "8", "9",
-            "10", "11", "12", "13", "14A", "15", "16", "18", "19", "25"));
+            "10", "11", "12", "13", "14A", "15", "16", "18", "25"));
+
+    /**
+     * Keep the prerequisite notice concise without hiding a partially completed lab.
+     * The full first block is 1–13 + 14A (not 14B or a separate Lab 14).
+     */
+    static String compactPending(List<String> missing, boolean greek) {
+        if (missing == null || missing.isEmpty()) return "";
+        List<String> firstBlock = REQUIRED.subList(0, 14);
+        boolean fullFirstBlock = missing.containsAll(firstBlock);
+        List<String> display = new ArrayList<>();
+        if (fullFirstBlock) display.add(greek ? "1–14Α" : "1–14A");
+        for (String id : missing) {
+            if (fullFirstBlock && firstBlock.contains(id)) continue;
+            display.add(greek ? id.replace("14A", "14Α") : id);
+        }
+        return String.join(", ", display);
+    }
 
     private static final Pattern HEADER = Pattern.compile(
             "^\\s*LAB\\s+(14A|[1-9]|1[0-9]|2[0-9])\\s*[—–-]",
