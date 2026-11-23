@@ -46,7 +46,7 @@ public final class Lab27CertificationNoiseRegressionTest {
         assertTrue(lab.contains("Lab27FunctionGradePolicy.apply(lab27GradeDrivers)"));
         assertTrue(lab.contains("confirmedCameraFunctionFailure);"));
         assertFalse(lab.contains("confirmedCameraFunctionFailure, lab27EvidenceFindings.size()"));
-        assertTrue(lab.contains("if (confirmedFunctionalFailures > 0)"));
+        assertTrue(lab.contains("if (!lab27GradeDrivers.isEmpty())"));
         assertTrue(lab.contains(".putInt(\"lab27_cert_functional_findings\", confirmedFunctionalFailures)"));
         assertTrue(lab.contains("logLabelInfoValue(gr ? \"Εργαστήρια με παρατηρήσεις\""));
     }
