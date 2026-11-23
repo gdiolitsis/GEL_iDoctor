@@ -19,10 +19,10 @@ final class Lab28BuyerSummary {
                 : "No valid grade is available. Run Lab 27 again.";
 
         if (confirmedFunctionalFault) return greek
-                ? "Η πιστοποίηση εντόπισε επιβεβαιωμένη δυσλειτουργία. "
-                  + "Δες το συγκεκριμένο εύρημα στο Lab 27 πριν αποφασίσεις."
-                : "Certification identified a confirmed functional failure. "
-                  + "Review the specific Lab 27 finding before deciding.";
+                ? "Το Lab 27 κατέγραψε επιβεβαιωμένο λειτουργικό περιορισμό. "
+                  + "Δες το συγκεκριμένο εύρημα και επανέλεγξέ το πριν αποφασίσεις."
+                : "Lab 27 documented a confirmed operational limitation. "
+                  + "Review and recheck the specific finding before deciding.";
 
         switch (grade) {
             case "A+":
