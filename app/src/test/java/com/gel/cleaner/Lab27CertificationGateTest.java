@@ -10,7 +10,7 @@ import static org.junit.Assert.*;
 
 /** Rules must fail closed for omitted, stale, warned or unconfirmed evidence. */
 public final class Lab27CertificationGateTest {
-    @Test public void exactlyEighteenRequiredBasicLabs() {
+    @Test public void exactlyNineteenRequiredBasicLabs() {
         assertEquals(19, Lab27CertificationGate.REQUIRED.size());
         assertTrue(Lab27CertificationGate.REQUIRED.contains("9"));
         assertTrue(Lab27CertificationGate.REQUIRED.contains("14A"));
@@ -21,6 +21,7 @@ public final class Lab27CertificationGateTest {
 
     @Test public void onlyActualPositiveCompletionMessagesAreCounted() {
         assertEquals("3", Lab27CertificationGate.completedLab("Το Lab 3 ολοκληρώθηκε."));
+        assertEquals("9", Lab27CertificationGate.completedLab("Το Lab 9 ολοκληρώθηκε."));
         assertEquals("4", Lab27CertificationGate.completedLab("Το Lab 4 BASE ολοκληρώθηκε."));
         assertEquals("14A", Lab27CertificationGate.completedLab(
                 "Το Lab 14A ολοκληρώθηκε (έγκυρη καταγραφή δοκιμής καταπόνησης)."));
@@ -157,6 +158,6 @@ public final class Lab27CertificationGateTest {
         assertFalse(tablet.contains("11"));
         assertFalse(tablet.contains("12"));
         assertFalse(tablet.contains("13"));
-        assertEquals(15, tablet.size());
+        assertEquals(16, tablet.size());
     }
 }
