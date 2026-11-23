@@ -72,11 +72,18 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
         back.setText(returnLabel);
         back.setContentDescription(returnLabel);
         back.setTextColor(Color.WHITE);
-        back.setTextSize(16f);
+        // SP honors the user's Android font-scale and accessibility settings.
+        // Never shrink, ellipsize, or force a one-line label on narrow screens.
+        back.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f);
         back.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         back.setGravity(Gravity.CENTER);
+        back.setSingleLine(false);
+        back.setHorizontallyScrolling(false);
+        back.setEllipsize(null);
+        back.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_HIGH_QUALITY);
         back.setIncludeFontPadding(true);
-        back.setPadding(dp(10), dp(6), dp(10), dp(6));
+        back.setPadding(dp(10), dp(10), dp(10), dp(10));
+        // Minimum touch target only; actual height grows to fit scaled text.
         back.setMinHeight(dp(54));
         back.setClickable(true);
         back.setFocusable(true);
