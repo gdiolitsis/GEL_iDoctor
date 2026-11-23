@@ -24,8 +24,8 @@ public final class IPhoneLab8HumanPresentationContractTest {
     @Test public void humanResultAppearsBeforeEvidenceDetailsAndIsNeverGreenCertification() throws Exception {
         String lab6=part(source(), "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
         int human=lab6.indexOf("Συνολικό συμπέρασμα — με απλά λόγια");
-        int codes=lab6.indexOf("Ενδείξεις που αναγνώρισε το GEL:");
-        assertTrue(human>=0 && codes>human);
+        int nextStep=lab6.indexOf("Προτεινόμενος έλεγχος:");
+        assertTrue(human>=0 && nextStep>human);
         assertFalse(lab6.contains("for (java.util.Map.Entry<String, Integer> e : crashCount.entrySet())"));
         assertTrue(lab6.contains("IPhonePanicServiceSummary.interpret("));
         assertTrue(lab6.contains("human.repairAdvice"));
@@ -40,8 +40,8 @@ public final class IPhoneLab8HumanPresentationContractTest {
         String lab6=part(source(), "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
         assertTrue(lab6.contains("ApplePanicEvidencePolicy.hasPanicEvidence(block)"));
         assertTrue(lab6.contains("parseAndCacheSignature(block)"));
-        assertTrue(lab6.contains("ApplePanicHardwareHints.examineOne(block)"));
-        assertTrue(lab6.contains("uniqueTechnicalCodes.add(finding.code)"));
+        assertFalse(lab6.contains("ApplePanicHardwareHints.examineOne(block)"));
+        assertFalse(lab6.contains("uniqueTechnicalCodes.add(finding.code)"));
         assertTrue(lab6.contains("repeatedCategory"));
         assertTrue(lab6.contains("domainCount.getOrDefault"));
         assertFalse(lab6.contains("logLabelOkValue(gr ? \"Ενδείξεις που αναγνώρισε το GEL:\""));
