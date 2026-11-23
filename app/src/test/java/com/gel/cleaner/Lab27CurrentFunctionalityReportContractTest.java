@@ -51,7 +51,7 @@ public final class Lab27CurrentFunctionalityReportContractTest {
     @Test public void gradeExcludesAppCountsButKeepsTimestampReportIdAndCertification() throws Exception {
         String s = report();
         assertFalse(s.contains("Lab30ScoreEvidence.functionalPerformanceScore("));
-        assertTrue(s.contains("Lab27FunctionGradePolicy.apply(confirmedCameraFunctionFailure)"));
+        assertTrue(s.contains("Lab27FunctionGradePolicy.apply(lab27GradeDrivers)"));
         assertFalse(s.contains("Lab30ScoreEvidence.performanceScore("));
         assertTrue(s.contains("Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore)"));
         assertTrue(s.contains("Χρόνος διάγνωσης"));
