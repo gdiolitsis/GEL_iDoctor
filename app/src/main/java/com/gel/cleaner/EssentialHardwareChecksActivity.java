@@ -53,6 +53,7 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
 
     public static final String VERIFIED = "VERIFIED";
     public static final String USER_CONFIRMED = "USER_CONFIRMED";
+    public static final String USER_FAILED = "USER_FAILED";
     public static final String NOT_VERIFIED = "NOT_VERIFIED";
     public static final String NOT_TESTED = "NOT_TESTED";
     public static final String UNSUPPORTED = "UNSUPPORTED";
@@ -342,8 +343,10 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
                           + "not an automatic hardware measurement.")
                 .setPositiveButton(greek ? "ΝΑΙ, ΛΕΙΤΟΥΡΓΕΙ" : "YES, WORKS",
                         (dialog, which) -> set(EXTRA_POWER, USER_CONFIRMED))
-                .setNegativeButton(greek ? "ΟΧΙ / ΔΕΝ ΕΛΕΓΧΘΗΚΕ" : "NO / NOT TESTED",
-                        (dialog, which) -> set(EXTRA_POWER, NOT_VERIFIED))
+                .setNegativeButton(greek ? "ΟΧΙ, ΔΕΝ ΛΕΙΤΟΥΡΓΕΙ" : "NO, IT FAILED",
+                        (dialog, which) -> set(EXTRA_POWER, USER_FAILED))
+                .setNeutralButton(greek ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP",
+                        (dialog, which) -> set(EXTRA_POWER, NOT_TESTED))
                 .show();
     }
 
@@ -381,6 +384,7 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
         switch (status) {
             case VERIFIED: word = greek ? "ΕΠΑΛΗΘΕΥΤΗΚΕ" : "VERIFIED"; break;
             case USER_CONFIRMED: word = greek ? "ΕΠΙΒΕΒΑΙΩΣΗ ΧΡΗΣΤΗ" : "USER CONFIRMED"; break;
+            case USER_FAILED: word = greek ? "ΔΗΛΩΘΗΚΕ ΔΥΣΛΕΙΤΟΥΡΓΙΑ" : "USER REPORTED FAILURE"; break;
             case UNSUPPORTED: word = greek ? "ΔΕΝ ΥΠΟΣΤΗΡΙΖΕΤΑΙ" : "NOT SUPPORTED"; break;
             case DISABLED: word = greek ? "ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ" : "DISABLED"; break;
             case PERMISSION_DENIED: word = greek ? "ΔΕΝ ΔΟΘΗΚΕ ΑΔΕΙΑ" : "PERMISSION NOT GRANTED"; break;
@@ -390,8 +394,9 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
         if (EXTRA_GPS.equals(key) && VERIFIED.equals(status) && Float.isFinite(gpsAccuracy))
             word += String.format(Locale.US, " (±%.0f m)", gpsAccuracy);
         text.setText(word);
-        text.setTextColor(VERIFIED.equals(status) || USER_CONFIRMED.equals(status)
-                ? 0xFF39FF14 : Color.WHITE);
+        text.setTextColor(USER_FAILED.equals(status) ? 0xFFFF4444
+                : (VERIFIED.equals(status) || USER_CONFIRMED.equals(status))
+                        ? 0xFF39FF14 : Color.WHITE);
     }
 
     private void addGroup(LinearLayout parent, String title) {
