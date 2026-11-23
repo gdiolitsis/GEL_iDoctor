@@ -1724,6 +1724,18 @@ private void runImpactLab() {
 
 // ============================================================
 // ============================================================
+// Counts only eligible imported panic records, never unrelated ZIP entries.
+// Shared by AUTO, import, demo, signature interpretation and comparison.
+private int countSupportedPanicBlocks(String[] blocks) {
+    int valid = 0;
+    if (blocks != null) {
+        for (String block : blocks)
+            if (ApplePanicEvidencePolicy.hasPanicEvidence(block)) valid++;
+    }
+    return valid;
+}
+
+// ============================================================
 // LAB 4 — FREQUENCY OF CRASH TYPES AND KEYWORD DOMAINS
 // The two counts represent different classifications of the same records.
 // Presence/repetition of a keyword is not an independently proven hardware defect.
