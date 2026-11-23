@@ -1,0 +1,37 @@
+name: iPhone free-text Apple troubleshooting — source and UI tests
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/gel/cleaner/MainActivity.java'
+      - 'app/src/main/java/com/gel/cleaner/AppleSymptomSearch.java'
+      - 'app/src/main/assets/iphone_apple_symptom_search_terms_v1.tsv'
+      - 'app/src/main/res/layout/activity_main.xml'
+      - 'app/src/test/java/com/gel/cleaner/AppleSymptomSearchTest.java'
+      - '.github/workflows/qa-iphone-free-text-apple-troubleshooting.yml'
+permissions:
+  contents: read
+jobs:
+  compile-and-unit-test:
+    if: ${{ github.event.pull_request.head.ref == 'qa/iphone-free-text-apple-troubleshooting-20261123' && github.event.pull_request.base.ref == 'release/v74-signed-qa-20261123' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Verify catalog, compile, and run unit tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/iphone/verify_apple_repair_source_coverage.py
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:compileDebugJavaWithJavac :app:testDebugUnitTest --no-daemon --console=plain
