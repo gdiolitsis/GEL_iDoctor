@@ -31792,7 +31792,6 @@ boolean thermalRunawayRisk =
     final boolean gr = AppLang.isGreek(this);
     // Full lab/OEM/user evidence is validated before this report can be built.
     appendHtml("<br>");
-    logLine();
     logInfo(gr
             ? "LAB 27 — Αυτόματη Σύνοψη Μετρήσεων"
             : "LAB 27 — Automatic Measurements Summary");
@@ -31902,21 +31901,7 @@ int stabilityScore = scoreStability(upMs);
 String stabilityFlag = "⚪";
 
 // ------------------------------------------------------------
-// 7) SECURITY (lockscreen + patch + adb/dev + root)
-// ------------------------------------------------------------
-SecuritySnapshot sec = readSecuritySnapshot();
-int securityScore = scoreSecurity(sec);
-String securityFlag = "⚪";
-
-// ------------------------------------------------------------
-// 8) PRIVACY (dangerous granted perms to user apps)
-// ------------------------------------------------------------
-PrivacySnapshot pr = readPrivacySnapshot();
-int privacyScore = Lab30ScoreEvidence.hasPrivacyCoverage(
-        pr.totalUserAppsChecked, pr.coverageIncomplete)
-        ? scorePrivacy(convertToEnginePrivacy(pr)) : -1;
-String privacyFlag = "⚪";
-
+// Security and privacy details belong in their dedicated labs.
 // ------------------------------------------------------------
 // Former Lab27 duplicated thermal/uptime readings already collected in Labs 14–20
 // and in this technical summary. The unverified symptom-keyword mask is removed.
@@ -31976,8 +31961,7 @@ hardwareRiskScore = Math.max(
 // ------------------------------------------------------------
 // AUTOMATIC FAULT CLASSIFICATION ENGINE
 // ------------------------------------------------------------
-logLine();
-/* Uncalibrated diagnosis header not displayed */;
+
 
 boolean faultDetected = false;
 
@@ -32124,8 +32108,7 @@ if (!faultDetected) {
 // ------------------------------------------------------------
 // PROBABLE ROOT CAUSE ENGINE
 // ------------------------------------------------------------
-logLine();
-/* Uncalibrated diagnosis header not displayed */;
+
 
 String rootCause = gr ? "Δεν εντοπίστηκε σαφής αιτία"
                       : "No clear root cause detected";
@@ -32327,8 +32310,7 @@ if (riskSignals == 1) {
 // ------------------------------------------------------------
 // DEVICE RELIABILITY RATING
 // ------------------------------------------------------------
-logLine();
-/* Uncalibrated diagnosis header not displayed */;
+
 
 String rating;
 String ratingDesc;
@@ -32383,10 +32365,7 @@ else {
 // ------------------------------------------------------------
 // GEL HARDWARE INTEGRITY CERTIFICATE
 // ------------------------------------------------------------
-appendHtml("<br>");
-logLine();
-/* Uncalibrated diagnosis header not displayed */;
-logLine();
+
 
 boolean certificateWarning = false;
 
@@ -32456,7 +32435,8 @@ java.util.List<String> lab27EvidenceFindings =
         lab27BasicLabsWithFindings(p, lab27ApplicableBasicLabs());
 boolean confirmedCameraFunctionFailure = lab27HasCameraFunctionalFailure(p);
 int deviceHealthScore = Lab27FunctionGradePolicy.apply(measuredDeviceHealthScore,
-        confirmedCameraFunctionFailure, lab27EvidenceFindings.size());
+        confirmedCameraFunctionFailure);
+int confirmedFunctionalFailures = confirmedCameraFunctionFailure ? 1 : 0;
 // The reported grade now reflects tested functional faults as well as readings.
 final String snapshotGrade = Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore);
 final String displayedGrade = gr && "D".equals(snapshotGrade) ? "Δ" : snapshotGrade;
@@ -32598,74 +32578,13 @@ if (upMs < 2 * 60 * 60 * 1000L) {
     /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
-appendHtml("<br>");
-logInfo(gr ? "Ασφάλεια" : "Security");
-logLine();
-
-lab27LogScoreValue(gr ? "Κατάσταση" : "Status", securityScore, securityFlag, gr);
-
-if (sec.lockSecure) {
-    logLabelOkValue(gr ? "Κλείδωμα συσκευής" : "Secure lock",
-            gr ? "Ενεργό" : "Enabled");
-} else {
-    logLabelWarnValue(gr ? "Κλείδωμα συσκευής" : "Secure lock",
-            gr ? "Δεν υπάρχει ασφαλές κλείδωμα" : "No secure screen lock");
-}
-
-if (sec.securityPatch != null && !sec.securityPatch.trim().isEmpty()) {
-    logLabelInfoValue(gr ? "Ενημέρωση ασφαλείας" : "Patch level", sec.securityPatch);
-} else {
-    logLabelValue(gr ? "Ενημέρωση ασφαλείας" : "Patch level",
-            gr ? "Άγνωστο" : "Unknown");
-}
-
-logLabelInfoValue(
-        "ADB / Dev",
-        "USB=" + sec.adbUsbOn +
-        " | Wi-Fi=" + sec.adbWifiOn +
-        " | DevOptions=" + sec.devOptionsOn
-);
-
-if (sec.rootSuspected)
-    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
-
-if (sec.testKeys)
-    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
-
-appendHtml("<br>");
-logInfo(gr ? "Ιδιωτικότητα" : "Privacy");
-logLine();
-
-if (privacyScore < 0) {
-    // Keep the explicit missing-coverage explanation from the original report.
-    logLabelValue(gr ? "Κατάσταση" : "Status",
-            gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — ελλιπής απογραφή αδειών"
-               : "INSUFFICIENT DATA — incomplete permissions sample");
-} else {
-    lab27LogScoreValue(gr ? "Κατάσταση" : "Status", privacyScore, privacyFlag, gr);
-}
-
-String visiblePermissionCounts =
-        "Location=" + pr.userAppsWithLocation +
-        " | Mic=" + pr.userAppsWithMic +
-        " | Camera=" + pr.userAppsWithCamera +
-        " | SMS=" + pr.userAppsWithSms;
-if (pr.totalUserAppsChecked > 0) {
-    // Permission counts are facts, not proof of abuse or elevated risk.
-    logLabelInfoValue(gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
-            visiblePermissionCounts);
-} else {
-    logLabelValue(gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
-            gr ? "Δεν υπάρχει επαρκές δείγμα" : "Insufficient sample");
-}
+// Security patch level, developer options and app grants are outside functional certification.
 
 // ------------------------------------------------------------
 // FINAL VERDICT
 // ------------------------------------------------------------
 
 appendHtml("<br>");
-logLine();
-
 logInfo(gr
         ? "ΣΥΝΟΨΗ ΜΕΤΡΗΣΕΩΝ ΣΥΣΚΕΥΗΣ"
         : "DEVICE MEASUREMENTS SUMMARY");
@@ -32729,26 +32648,23 @@ if (snapshotGrade == null) {
 }
 java.util.List<String> lab27CheckedBasic = lab27ApplicableBasicLabs();
 java.util.List<String> lab27RemainingBasic = lab27PendingBasicLabs(p, lab27CheckedBasic);
-if (lab27RemainingBasic.isEmpty() && lab27EvidenceFindings.isEmpty()) {
+if (lab27RemainingBasic.isEmpty() && confirmedFunctionalFailures == 0) {
     logLabelOkValue(
             gr ? "Κατάσταση συσκευής" : "Device functional status",
             gr ? "Καλή λειτουργία στους ελεγμένους τομείς: "
                     + lab27CheckedBasic.size() + "/" + lab27CheckedBasic.size()
-                    + " απαραίτητα εργαστήρια ολοκληρώθηκαν επιτυχώς."
+                    + " απαραίτητα εργαστήρια ολοκληρώθηκαν."
                : "Tested functions operating correctly: "
                     + lab27CheckedBasic.size() + "/" + lab27CheckedBasic.size()
-                    + " required labs completed successfully.");
+                    + " required labs completed.");
+} else if (lab27RemainingBasic.isEmpty()) {
+    logLabelWarnValue(gr ? "Κατάσταση συσκευής" : "Device functional status",
+            gr ? "Επιβεβαιωμένη αποτυχία ζωντανής εικόνας κάμερας στο Lab 8."
+               : "Confirmed camera live-preview failure in Lab 8.");
 } else {
-    logLabelWarnValue(
-            gr ? "Κατάσταση συσκευής" : "Device functional status",
-            gr ? (lab27RemainingBasic.isEmpty()
-                    ? "Ολοκληρώθηκαν με ευρήματα: "
-                      + android.text.TextUtils.join(", ", lab27EvidenceFindings)
-                    : "Δεν ολοκληρώθηκαν: " + android.text.TextUtils.join(", ", lab27RemainingBasic))
-               : (lab27RemainingBasic.isEmpty()
-                    ? "Completed with findings: "
-                      + android.text.TextUtils.join(", ", lab27EvidenceFindings)
-                    : "Not completed: " + android.text.TextUtils.join(", ", lab27RemainingBasic)));
+    logLabelWarnValue(gr ? "Κατάσταση συσκευής" : "Device functional status",
+            (gr ? "Δεν ολοκληρώθηκαν: " : "Not completed: ")
+                    + android.text.TextUtils.join(", ", lab27RemainingBasic));
 }
 if (confirmedCameraFunctionFailure) {
     logLabelErrorValue(gr ? "Σοβαρή δυσλειτουργία Lab 8" : "Serious Lab 8 functional failure",
@@ -32756,20 +32672,16 @@ if (confirmedCameraFunctionFailure) {
                : "At least one camera failed the user-observed live preview check. Maximum grade D (49/100). The underlying cause is not identified.");
 }
 if (!lab27EvidenceFindings.isEmpty()) {
-    logLabelWarnValue(gr ? "Εργαστήρια με ευρήματα" : "Labs with findings",
+    logLabelInfoValue(gr ? "Εργαστήρια με παρατηρήσεις" : "Labs with observations",
             android.text.TextUtils.join(", ", lab27EvidenceFindings));
 }
 logLabelValue(
         gr ? "Βάση βαθμολογίας" : "Rating basis",
-        gr ? "Η βαθμολογία ξεκινά από τις μετρήσεις και υποβαθμίζεται από δυσλειτουργίες σε ολοκληρωμένα εργαστήρια. Η πιστοποίηση απαιτεί εκτελεσμένους ελέγχους, σύγκριση προδιαγραφών και επιβεβαίωση φυσικών υποδοχών."
-           : "The grade starts from measured values and is downgraded for functional failures in completed labs. Certification requires completed labs, OEM comparison and user-confirmed physical connectors."
+        gr ? "Η βαθμολογία ξεκινά από τις μετρήσεις και υποβαθμίζεται μόνο από τεκμηριωμένες λειτουργικές αποτυχίες. Απλές παρατηρήσεις, ενημερώσεις ασφαλείας και άδειες εφαρμογών δεν αφαιρούν βαθμούς. Απαιτούνται επίσης όλα τα βασικά εργαστήρια και οι έλεγχοι OEM/χρήστη."
+           : "The grade starts from measurements and is reduced only by documented functional failures. Informational observations, security patches and app grants do not subtract points. All required labs and OEM/user checks remain mandatory."
 );
 
 lab27LogScoreValue(gr ? "Απόδοση" : "Performance", performanceScore, "⚪", gr);
-
-lab27LogScoreValue(gr ? "Ασφάλεια" : "Security", securityScore, securityFlag, gr);
-
-lab27LogScoreValue(gr ? "Ιδιωτικότητα" : "Privacy", privacyScore, privacyFlag, gr);
 
 // Current operation is summarized in the measured functional status and certification gate above.
 // No unsupported hardware trends, run-count confidence labels or duplicate final verdict.
@@ -32777,8 +32689,7 @@ lab27LogScoreValue(gr ? "Ιδιωτικότητα" : "Privacy", privacyScore, pr
 // ------------------------------------------------------------
 // GEL DIAGNOSTIC CERTIFICATION
 // ------------------------------------------------------------
-logLine();
-/* Uncalibrated diagnosis header not displayed */;
+
 
 // Device rating
 /* Internal heuristic index omitted from measured-results report */;
@@ -32896,7 +32807,7 @@ if (!eligibleCert) {
             .putString("lab27_cert_grade", snapshotGrade)
             .putInt("lab27_cert_score", deviceHealthScore)
             .putBoolean("lab27_cert_camera_failure", confirmedCameraFunctionFailure)
-            .putInt("lab27_cert_functional_findings", lab27EvidenceFindings.size())
+            .putInt("lab27_cert_functional_findings", confirmedFunctionalFailures)
             .putInt("lab27_cert_oem_matches", certFactory.matches)
             .putBoolean("lab27_cert_usb", lab27UserUsb)
             .putBoolean("lab27_cert_usb_absent", lab27UserUsbAbsent)
@@ -32910,7 +32821,7 @@ if (!eligibleCert) {
             .putString("lab27_cert_oem_source", certPorts.sourceUrl)
             .putBoolean("lab27_cert_physical_confirmed", true)
             .apply();
-    if (confirmedCameraFunctionFailure || !lab27EvidenceFindings.isEmpty()) {
+    if (confirmedFunctionalFailures > 0) {
         logLabelWarnValue("GEL Device Certification",
                 (gr ? "ΠΙΣΤΟΠΟΙΗΣΗ ΜΕ ΠΕΡΙΟΡΙΣΜΟΥΣ — βαθμός "
                     : "CERTIFIED WITH FUNCTIONAL LIMITATIONS — grade ")
