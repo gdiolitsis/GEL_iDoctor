@@ -20,11 +20,11 @@ import java.util.regex.Pattern;
  * OEM matches do not establish that replacement parts are genuine.
  */
 final class Lab27CertificationGate {
-    static final int SCHEMA = 11; // New source-bound Lab15/Lab16 operational evidence required.
+    static final int SCHEMA = 12; // Includes same-boot, source-bound Lab 9 functional evidence.
     static final long MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L;
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
-            "1", "2", "3", "4", "5", "6", "7", "8",
+            "1", "2", "3", "4", "5", "6", "7", "8", "9",
             "10", "11", "12", "13", "14A", "15", "16", "18", "19", "25"));
 
     private static final Pattern HEADER = Pattern.compile(
