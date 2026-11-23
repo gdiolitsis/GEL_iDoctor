@@ -3005,12 +3005,7 @@ btn.setText("🍎 " + type.toUpperCase(Locale.US)
 + " — " + rawModel);
 }
 
-Toast.makeText(
-this,
-(AppLang.isGreek(this) ? "Επιλέχθηκε: " : "Selected: ") + rawModel,
-Toast.LENGTH_SHORT
-).show();
-
+// The updated declaration button is the confirmation; no OEM Toast popup.
 d.dismiss();
 if (continueToBibliography) showAppleTroubleshootingLibrary();
 });
