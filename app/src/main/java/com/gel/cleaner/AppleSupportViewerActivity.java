@@ -154,10 +154,6 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
         webView.loadUrl(url);
     }
 
-    private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
-    }
-
     @Override
     protected void onDestroy() {
         if (webView != null) {
