@@ -74,6 +74,9 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
     private LocationListener gpsListener;
     private NfcAdapter nfcAdapter;
     private long gpsStartNs;
+    private long sensorTrialElapsedMs = -1L;
+    private long gpsTrialElapsedMs = -1L;
+    private long volumeTrialElapsedMs = -1L;
     private float gpsAccuracy = Float.NaN;
     private final Map<Integer, float[]> sensorFirst = new LinkedHashMap<>();
     private boolean volumeUp, volumeDown;
@@ -160,6 +163,22 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
                   + "cannot verify their hardware key events.",
                 13, Color.WHITE, false);
 
+        addGroup(body, greek ? "Δηλωμένη δυσλειτουργία μετά από επανέλεγχο"
+                        : "Report a failure after repeating a test");
+        label(body, greek
+                ? "Αν ένας έλεγχος δεν έδειξε απόκριση παρότι ακολούθησες σωστά τις οδηγίες, "
+                  + "επανάλαβέ τον. Μόνο τότε μπορείς να δηλώσεις ποια λειτουργία δεν ανταποκρίθηκε. "
+                  + "Αυτό επηρεάζει την πιστοποίηση Lab 27 ως δήλωση χρήστη, όχι ως βεβαιωμένη βλάβη εξαρτήματος. "
+                  + "Οι δοκιμές NFC και Power δεν βαθμολογούνται."
+                : "If a check has no response, repeat it using the instructions. "
+                  + "Only then report which function did not respond. "
+                  + "Lab 27 treats that as a user-reported functional issue, not proof of a damaged component. "
+                  + "NFC and Power are not graded.",
+                14, Color.WHITE, false);
+        action(body, greek ? "ΔΗΛΩΣΗ ΔΥΣΛΕΙΤΟΥΡΓΙΑΣ ΜΕΤΑ ΑΠΟ ΕΠΑΝΕΛΕΓΧΟ"
+                        : "REPORT FAILURE AFTER RETEST",
+                () -> reportUnresponsiveFunction(), false);
+
         action(body, greek ? "ΤΕΛΟΣ — ΕΠΙΣΤΡΟΦΗ ΣΤΑ LOGS"
                         : "FINISH — RETURN TO LOGS",
                 () -> finishWithResults(), true);
@@ -168,6 +187,7 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
 
     private void startSensors() {
         stopSensors();
+        sensorTrialElapsedMs = SystemClock.elapsedRealtime();
         sensorFirst.clear();
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager == null) {
@@ -227,6 +247,10 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
 
     private void startGps() {
         stopGps();
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS)) {
+            set(EXTRA_GPS, UNSUPPORTED);
+            return;
+        }
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             // Android 12+ ignores fine-only requests on some releases.
@@ -242,6 +266,7 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
                 return;
             }
             gpsStartNs = SystemClock.elapsedRealtimeNanos();
+            gpsTrialElapsedMs = SystemClock.elapsedRealtime();
             gpsRunning = true;
             set(EXTRA_GPS, NOT_VERIFIED);
             gpsListener = new LocationListener() {
@@ -328,6 +353,7 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
     }
 
     private void startVolume() {
+        volumeTrialElapsedMs = SystemClock.elapsedRealtime();
         volumeRunning = true;
         volumeUp = volumeDown = false;
         set(EXTRA_VOLUME_UP, NOT_VERIFIED);
@@ -350,6 +376,72 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
             }
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    /**
+     * A missing sensor event is inconclusive. Only a deliberate user declaration
+     * after the guided test interval can be forwarded as a functional issue.
+     * NFC and Power are absent from the candidate list by design.
+     */
+    private void reportUnresponsiveFunction() {
+        java.util.ArrayList<String> candidates = new java.util.ArrayList<>();
+        long elapsed = SystemClock.elapsedRealtime();
+        for (String key : Lab9CertificationEvidence.GRADED) {
+            if (!NOT_VERIFIED.equals(values.get(key))) continue;
+            long start = (EXTRA_GPS.equals(key)) ? gpsTrialElapsedMs
+                    : (EXTRA_VOLUME_UP.equals(key) || EXTRA_VOLUME_DOWN.equals(key))
+                    ? volumeTrialElapsedMs : sensorTrialElapsedMs;
+            long required = (EXTRA_GPS.equals(key)) ? GPS_TIME_MS
+                    : (EXTRA_VOLUME_UP.equals(key) || EXTRA_VOLUME_DOWN.equals(key))
+                    ? 10000L : SENSOR_TIME_MS;
+            if (start >= 0L && elapsed >= start + required) candidates.add(key);
+        }
+        if (candidates.isEmpty()) {
+            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                    .setMessage(greek
+                            ? "Δεν υπάρχει ολοκληρωμένη δοκιμή χωρίς απόκριση. "
+                              + "Εκτέλεσε πρώτα τον σχετικό έλεγχο και περίμενε να ολοκληρωθεί. "
+                              + "Μην ερμηνεύεις την απουσία ένδειξης ως βλάβη."
+                            : "No finished check is awaiting confirmation. "
+                              + "Run the relevant check first and let it finish. "
+                              + "No reading is not proof of a fault.")
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
+        String[] names = new String[candidates.size()];
+        for (int i = 0; i < names.length; i++)
+            names[i] = Lab9CertificationEvidence.displayName(candidates.get(i), greek);
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle(greek ? "Ποιος έλεγχος δεν ανταποκρίθηκε;"
+                                : "Which check did not respond?")
+                .setItems(names, (selection, which) -> {
+                    String key = candidates.get(which);
+                    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                            .setTitle(greek ? "Επιβεβαίωση δυσλειτουργίας"
+                                            : "Confirm functional issue")
+                            .setMessage(greek
+                                    ? "Επανέλαβες τη δοκιμή με σωστές συνθήκες και η λειτουργία «"
+                                      + Lab9CertificationEvidence.displayName(key, true)
+                                      + "» δεν ανταποκρίθηκε; Για το GPS χρειάζεται ανοιχτός χώρος. "
+                                      + "Η δήλωσή σου θα μειώσει τη βαθμολογία Lab 27, "
+                                      + "χωρίς να αποδεικνύει χαλασμένο εξάρτημα."
+                                    : "Did you repeat the check correctly without a response from "
+                                      + Lab9CertificationEvidence.displayName(key, false)
+                                      + "? GPS needs open sky. Your report will lower the Lab 27 "
+                                      + "grade without proving a defective component.")
+                            .setPositiveButton(greek ? "ΝΑΙ, ΕΠΙΒΕΒΑΙΩΝΩ" : "YES, CONFIRM",
+                                    (dialog, accepted) -> {
+                                        if (EXTRA_GPS.equals(key)) stopGps();
+                                        else if (EXTRA_VOLUME_UP.equals(key)
+                                                || EXTRA_VOLUME_DOWN.equals(key))
+                                            volumeRunning = false;
+                                        else stopSensors();
+                                        set(key, USER_FAILED);
+                                    })
+                            .setNegativeButton(greek ? "ΑΚΥΡΩΣΗ / ΕΠΑΝΕΛΕΓΧΟΣ"
+                                                    : "CANCEL / RETEST", null)
+                            .show();
+                }).show();
     }
 
     private void confirmPower() {
