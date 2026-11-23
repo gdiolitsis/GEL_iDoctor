@@ -76,7 +76,7 @@ public final class Lab27VisualPresenceContractTest {
     }
 
     @Test public void oldCertificatesCannotBypassOemSelectedVisualAnswers() {
-        assertEquals(9, Lab27CertificationGate.SCHEMA);
+        assertEquals(10, Lab27CertificationGate.SCHEMA);
         Lab27CertificationGate.Presence yes = Lab27CertificationGate.Presence.PRESENT;
         Lab27CertificationGate.Presence missing = Lab27CertificationGate.Presence.UNKNOWN;
         // This model's OEM does not describe any headphone jack.
