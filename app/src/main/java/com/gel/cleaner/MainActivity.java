@@ -3043,9 +3043,9 @@ private void showAppleTroubleshootingLibrary() {
     String family = prefs.getString("apple_type", "");
     String model = prefs.getString("apple_model", "");
     if (!"iphone".equalsIgnoreCase(family) || model == null || model.trim().isEmpty()) {
-        showAppleReferenceNotice(gr
-                ? "Επίλεξε πρώτα μοντέλο συσκευής από το αρχικό μενού, πατώντας «Δήλωση Συσκευής Apple» και επιλέγοντας iPhone."
-                : "First select your device model from the main menu: tap Apple Device Declaration and choose an iPhone.");
+        showAppleReferenceNotice(gr ? "Επιλογή συσκευής" : "Select device",
+                gr ? "Επίλεξε πρώτα μοντέλο συσκευής από το αρχικό μενού, πατώντας «Δήλωση Συσκευής Apple» και επιλέγοντας iPhone."
+                   : "First select your device model from the main menu: tap Apple Device Declaration and choose an iPhone.");
         return;
     }
 
@@ -3222,8 +3222,13 @@ private void showAppleReferenceDialog(AlertDialog dialog) {
 }
 
 private void showAppleReferenceNotice(String message) {
+    boolean gr = AppLang.isGreek(this);
+    showAppleReferenceNotice(gr ? "Βιβλιογραφία Apple" : "Apple documentation", message);
+}
+
+private void showAppleReferenceNotice(String title, String message) {
     final boolean gr = AppLang.isGreek(this);
-    LinearLayout box = newAppleReferenceBox(gr ? "Βιβλιογραφία Apple" : "Apple documentation");
+    LinearLayout box = newAppleReferenceBox(title);
     TextView text = new TextView(this);
     text.setText(message);
     text.setTextColor(Color.WHITE);
