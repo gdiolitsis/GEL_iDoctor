@@ -112,6 +112,13 @@ public final class AppleTroubleshootingLibraryTest {
         int diagnostics = layout.indexOf("@+id/btnDiagnostics");
         assertTrue(library > 0 && diagnostics > library);
         assertTrue(main.contains("bind(R.id.btnAppleTroubleshooting,"));
+        assertTrue("Button must be shown before model selection",
+                main.contains("show(R.id.btnAppleTroubleshooting);"));
+        assertTrue("Missing selection must show explicit guidance",
+                main.contains("Επίλεξε πρώτα μοντέλο συσκευής από το αρχικό μενού"));
+        assertTrue("Model guard must prevent navigation without selection",
+                main.contains("if (!\"iphone\".equalsIgnoreCase(family) || model == null || model.trim().isEmpty())"));
+
         assertTrue(main.contains("startActivity(viewer)"));
         assertTrue(main.contains("AppleSupportViewerActivity.EXTRA_SOURCE_URL"));
         assertTrue(viewer.contains("new OnBackPressedCallback(true)"));
