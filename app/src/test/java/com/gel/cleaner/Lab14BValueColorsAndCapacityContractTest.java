@@ -43,8 +43,8 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         assertTrue(s.contains("logLabelOkValue(\"End Volt\", String.valueOf(endVolt[0]))"));
         assertTrue(s.contains("logLabelOkValue(gr ? \"Φόρτιση (έναρξη / λήξη)\""));
         assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Κατανάλωση\""));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Άνοδος θερμοκρασίας\""));
-        assertTrue(s.contains("logLabelWarnValue(gr ? \"Άνοδος θερμοκρασίας\""));
+        assertTrue(s.contains("logLabelOkValue(gr ? \"Μεταβολή θερμοκρασίας\""));
+        assertTrue(s.contains("logLabelWarnValue(gr ? \"Μεταβολή θερμοκρασίας\""));
         assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Μεταβολή τάσης (+πτώση/-άνοδος)\""));
         assertFalse(s.contains("logLabelOkValue(gr ? \"Διορθωμένη κατανάλωση\""));
         assertTrue(s.contains("gr ? \"Μ/Δ\" : \"N/A\""));
@@ -108,7 +108,7 @@ public final class Lab14BValueColorsAndCapacityContractTest {
                 "Επίπεδο μπαταρίας", "Χωρητικότητα αναφοράς (14B/Γ)",
                 "Start Temp", "End Temp", "Start Volt", "End Volt",
                 "Φόρτιση (έναρξη / λήξη)", "Κατανάλωση",
-                "Άνοδος θερμοκρασίας", "Μεταβολή τάσης (+πτώση/-άνοδος)",
+                "Μεταβολή θερμοκρασίας", "Μεταβολή τάσης (+πτώση/-άνοδος)",
                 "Εκτιμώμενη διάρκεια στο 100% (μοντέλο)", "Μπαταρία" }) {
             assertTrue("Missing GAMMA data field: " + measured,
                     conditions.contains(measured) || duration.contains(measured));
@@ -117,7 +117,7 @@ public final class Lab14BValueColorsAndCapacityContractTest {
                 "logLabelOkValue(\"Start Temp\"", "logLabelOkValue(\"End Temp\"",
                 "logLabelOkValue(\"Start Volt\"", "logLabelOkValue(\"End Volt\"",
                 "logLabelOkValue(gr ? \"Φόρτιση (έναρξη / λήξη)\"",
-                "logLabelOkValue(gr ? \"Άνοδος θερμοκρασίας\"",
+                "logLabelOkValue(gr ? \"Μεταβολή θερμοκρασίας\"",
                 "logLabelOkValue(gr ? \"Εκτιμώμενη διάρκεια στο 100% (μοντέλο)\"",
                 "logLabelOkValue(gr ? \"Μπαταρία\"",
                 "logLabelOkValue(labelLight,", "logLabelOkValue(labelNormal,",
