@@ -57,6 +57,13 @@
     <uses-permission android:name="android.permission.NFC"/>
     <uses-feature android:name="android.hardware.nfc" android:required="false"/>
 
+    <!-- Diagnostic pages may request portrait at runtime, but a portrait-only
+         screen is NOT a device installation requirement. Explicitly override
+         Google Play's inferred required feature from screenOrientation. -->
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
+
     <!-- ============================================================
          BLUETOOTH
          ============================================================ -->

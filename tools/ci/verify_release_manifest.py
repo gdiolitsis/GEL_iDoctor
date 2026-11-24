@@ -29,6 +29,12 @@ assert root.get(ANDROID + "versionName") == sys.argv[3], "Wrong version name"
 scanner = [a for a in app.findall("activity") if a.get(ANDROID + "name") == "com.journeyapps.barcodescanner.CaptureActivity"]
 assert len(scanner) == 1, "Expected exactly one scanner activity"
 assert orientation(scanner[0].get(ANDROID + "screenOrientation")) == -1, "Scanner orientation still restricted"
+# A portrait runtime preference must NOT be an implicit hardware prerequisite
+# for Google Play distribution. Preserve the four approved portrait activities.
+portrait = [feature for feature in root.findall("uses-feature")
+            if feature.get(ANDROID + "name") == "android.hardware.screen.portrait"]
+assert len(portrait) == 1, "Expected explicit portrait hardware feature declaration"
+assert portrait[0].get(ANDROID + "required") == "false", "Portrait must be optional for Play"
 # These diagnostics intentionally lock portrait to keep active measurements,
 # touch targets and their visible logs stable on phone rotation. This is the
 # approved UI behavior, not an accidental dependency orientation restriction.
