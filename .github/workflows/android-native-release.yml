@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      - 'tools/ci/verify_release_manifest.py'
       - '.github/workflows/android-native-release.yml'
   workflow_dispatch:
     inputs:
