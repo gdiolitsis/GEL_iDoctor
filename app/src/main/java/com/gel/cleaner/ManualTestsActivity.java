@@ -14811,7 +14811,9 @@ if (tempValid) {
 
         } else if (deltaTemp >= 2.5f) {
 
-            logLabelValue(
+            // Moderate rise under load is not by itself a thermal warning.
+            // Preserve the independent absolute-temperature warning below.
+            logLabelOkValue(
                     gr ? "Θερμική μεταβολή"
                        : "Thermal change",
                     tempTextLocal
@@ -16215,13 +16217,13 @@ if (!Float.isNaN(sagAvg)) {
 
 if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
-    logLabelValue(
-            gr ? "Επαναληψιμότητα"
-               : "Repeatability",
-            repeatabilityGood
-                    ? (gr ? "Καλή" : "Good")
-                    : (gr ? "Μεταβλητή" : "Variable")
-    );
+    String repeatabilityLabel = gr ? "Επαναληψιμότητα" : "Repeatability";
+    if (repeatabilityGood) {
+        logLabelOkValue(repeatabilityLabel, gr ? "Καλή" : "Good");
+    } else {
+        // Variation across two sag samples is information, not a proven fault.
+        logLabelInfoValue(repeatabilityLabel, gr ? "Μεταβλητή" : "Variable");
+    }
 }
 
 // =====================================================
