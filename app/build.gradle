@@ -30,9 +30,9 @@ android {
         targetSdk = 36
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         // Final public-facing v53 (versionName) uses monotonically increasing
-        // versionCode 79 so it can replace an installed v78 safely.
+        // versionCode 80 because versionCode 79 was already uploaded to Google Play.
         // Version overrides remain available to CI if a later code is needed.
-        versionCode = (project.findProperty('gelQaVersionCode') ?: '79').toString().toInteger()
+        versionCode = (project.findProperty('gelQaVersionCode') ?: '80').toString().toInteger()
         versionName = (project.findProperty('gelQaVersionName') ?: '5.3-v53').toString()
 
 // ✅ SINGLE SOURCE OF ABI TRUTH
