@@ -29,11 +29,11 @@ android {
         minSdk = 26
         targetSdk = 36
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
-        // Final public-facing v53 (versionName) uses monotonically increasing
+        // Public-facing v54 (5.4) uses monotonically increasing
         // versionCode 80 because versionCode 79 was already uploaded to Google Play.
         // Version overrides remain available to CI if a later code is needed.
         versionCode = (project.findProperty('gelQaVersionCode') ?: '80').toString().toInteger()
-        versionName = (project.findProperty('gelQaVersionName') ?: '5.3-v53').toString()
+        versionName = (project.findProperty('gelQaVersionName') ?: '5.4').toString()
 
 // ✅ SINGLE SOURCE OF ABI TRUTH
         ndk {
