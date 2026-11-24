@@ -92,7 +92,8 @@ public final class LabsEvidenceOnlyReportContractTest {
 
     @Test public void finalReportSummarizesRecordedResultsWithoutImaginaryProblems() throws Exception {
         String thirtyOne = section("private void lab31FinalSummary()", "// ENABLE EXISTING EXPORT BUTTON");
-        assertTrue(thirtyOne.contains("Δεν καταγράφηκαν προειδοποιήσεις ή αστοχίες στο διαθέσιμο αρχείο."));
+        assertTrue(thirtyOne.contains("Δεν καταγράφηκαν προειδοποιήσεις ή αστοχίες στις διαθέσιμες καταγραφές της τρέχουσας συνεδρίας."));
+        assertTrue(thirtyOne.contains("Παλαιότερα ευρήματα άλλων συνεδριών δεν αξιολογούνται εδώ."));
         assertTrue(thirtyOne.contains("Lab29TechnicianAlerts.collect(sourceLog)"));
         assertTrue(thirtyOne.contains("logLabelErrorValue(label, finding.message)"));
         assertTrue(thirtyOne.contains("logLabelWarnValue(label, finding.message)"));
