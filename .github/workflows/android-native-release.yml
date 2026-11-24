@@ -1,4 +1,4 @@
-name: v53 Release Candidate — APK + AAB + Crashlytics Symbols
+name: v54 Release Candidate — APK + AAB + Crashlytics Symbols
 
 on:
   push:
@@ -19,7 +19,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: gel-idoctor-v53-release-candidate
+  group: gel-idoctor-v54-release-candidate
   cancel-in-progress: true
 
 jobs:
@@ -105,7 +105,7 @@ jobs:
 
           echo "CRASHLYTICS_RELEASE_TASKS=PASS"
 
-      - name: Build v53 release APK and AAB
+      - name: Build v54 release APK and AAB
         shell: bash
         run: |
           set -euxo pipefail
@@ -122,7 +122,7 @@ jobs:
           test -s app/build/outputs/bundle/release/app-release.aab
           find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print
 
-          echo "V53_RELEASE_BUILD=PASS"
+          echo "V54_RELEASE_BUILD=PASS"
 
       - name: Upload Crashlytics Java and native symbols
         shell: bash
@@ -239,20 +239,20 @@ jobs:
             -f \
             4 \
             "$APK" \
-            "$APK_DIR/GEL_iDoctor_v5.3_aligned.apk"
+            "$APK_DIR/GEL_iDoctor_v5.4_aligned.apk"
 
           "$BUILD_TOOLS/apksigner" sign \
             --ks "$GITHUB_WORKSPACE/gel-keystore.jks" \
             --ks-pass pass:"$KEYSTORE_PASSWORD" \
             --key-pass pass:"$KEY_ALIAS_PASSWORD" \
             --ks-key-alias "$KEY_ALIAS" \
-            --out "$APK_DIR/GEL_iDoctor_v5.3_signed.apk" \
-            "$APK_DIR/GEL_iDoctor_v5.3_aligned.apk"
+            --out "$APK_DIR/GEL_iDoctor_v5.4_signed.apk" \
+            "$APK_DIR/GEL_iDoctor_v5.4_aligned.apk"
 
           "$BUILD_TOOLS/apksigner" verify \
             --verbose \
             --print-certs \
-            "$APK_DIR/GEL_iDoctor_v5.3_signed.apk"
+            "$APK_DIR/GEL_iDoctor_v5.4_signed.apk"
 
           echo "SIGNED_APK_VERIFIED=PASS"
 
@@ -267,7 +267,7 @@ jobs:
 
           AAB_DIR="$GITHUB_WORKSPACE/app/build/outputs/bundle/release"
           SOURCE="$AAB_DIR/app-release.aab"
-          SIGNED="$AAB_DIR/GEL_iDoctor_v5.3_signed.aab"
+          SIGNED="$AAB_DIR/GEL_iDoctor_v5.4_signed.aab"
 
           test -s "$SOURCE"
           cp "$SOURCE" "$SIGNED"
@@ -290,46 +290,46 @@ jobs:
           echo "SIGNED_AAB_VERIFIED=PASS"
           echo "BUNDLETOOL_VALIDATE=PASS"
 
-      - name: Verify v53 Play release identity
+      - name: Verify v54 Play release identity
         shell: bash
         run: |
           set -euxo pipefail
 
           BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
-          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/release/GEL_iDoctor_v5.3_signed.apk"
+          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/release/GEL_iDoctor_v5.4_signed.apk"
 
           "$BUILD_TOOLS/aapt2" dump badging "$APK" \
-            | tee "$RUNNER_TEMP/v53-badging.txt"
+            | tee "$RUNNER_TEMP/v54-badging.txt"
 
-          grep -F "package: name='com.gel.iDoctor' versionCode='80' versionName='5.3-v53'" \
-            "$RUNNER_TEMP/v53-badging.txt"
+          grep -F "package: name='com.gel.iDoctor' versionCode='80' versionName='5.4'" \
+            "$RUNNER_TEMP/v54-badging.txt"
 
-          grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v53-badging.txt"
-          grep -F "targetSdkVersion:'36'" "$RUNNER_TEMP/v53-badging.txt"
+          grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v54-badging.txt"
+          grep -F "targetSdkVersion:'36'" "$RUNNER_TEMP/v54-badging.txt"
 
-          echo "V53_PLAY_IDENTITY=PASS"
+          echo "V54_PLAY_IDENTITY=PASS"
 
       - name: Verify packaged manifest orientation and resizing
         shell: bash
         run: |
           set -euo pipefail
           java -jar "$RUNNER_TEMP/bundletool.jar" dump manifest \
-            --bundle=app/build/outputs/bundle/release/GEL_iDoctor_v5.3_signed.aab \
-            > "$RUNNER_TEMP/v53-packaged-manifest.xml"
-          python3 tools/ci/verify_release_manifest.py "$RUNNER_TEMP/v53-packaged-manifest.xml" 80 5.3-v53
+            --bundle=app/build/outputs/bundle/release/GEL_iDoctor_v5.4_signed.aab \
+            > "$RUNNER_TEMP/v54-packaged-manifest.xml"
+          python3 tools/ci/verify_release_manifest.py "$RUNNER_TEMP/v54-packaged-manifest.xml" 80 5.4
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump xmltree \
-            app/build/outputs/apk/release/GEL_iDoctor_v5.3_signed.apk --file AndroidManifest.xml \
-            > "$RUNNER_TEMP/v53-apk-manifest.txt"
+            app/build/outputs/apk/release/GEL_iDoctor_v5.4_signed.apk --file AndroidManifest.xml \
+            > "$RUNNER_TEMP/v54-apk-manifest.txt"
 
       - name: Preserve internal candidate for release diagnostics
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v53_UNVERIFIED_candidate
+          name: GEL_iDoctor_v54_UNVERIFIED_candidate
           path: |
-            app/build/outputs/apk/release/GEL_iDoctor_v5.3_signed.apk
-            app/build/outputs/bundle/release/GEL_iDoctor_v5.3_signed.aab
+            app/build/outputs/apk/release/GEL_iDoctor_v5.4_signed.apk
+            app/build/outputs/bundle/release/GEL_iDoctor_v5.4_signed.aab
             app/build/outputs/mapping/release/mapping.txt
-            ${{ runner.temp }}/v53-packaged-manifest.xml
+            ${{ runner.temp }}/v54-packaged-manifest.xml
           retention-days: 7
           if-no-files-found: error
 
@@ -340,18 +340,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           bash tools/ci/verify_release_emulators.sh \
-            app/build/outputs/apk/release/GEL_iDoctor_v5.3_signed.apk
+            app/build/outputs/apk/release/GEL_iDoctor_v5.4_signed.apk
 
       - name: Upload startup diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v53_startup_evidence
+          name: GEL_iDoctor_v54_startup_evidence
           path: |
             ${{ runner.temp }}/startup-evidence
             ${{ runner.temp }}/emulator-*.log
-            ${{ runner.temp }}/v53-packaged-manifest.xml
-            ${{ runner.temp }}/v53-apk-manifest.txt
+            ${{ runner.temp }}/v54-packaged-manifest.xml
+            ${{ runner.temp }}/v54-apk-manifest.txt
             ${{ runner.temp }}/scanner-qr.png
           if-no-files-found: warn
 
@@ -363,12 +363,12 @@ jobs:
           source tools/webrtc/webrtc-promoted.env
 
           {
-            echo "GEL iDoctor v53 release-candidate evidence"
+            echo "GEL iDoctor v54 release-candidate evidence"
             echo
             echo "git_commit=$GITHUB_SHA"
             echo "application_id=com.gel.iDoctor"
             echo "version_code=80"
-            echo "version_name=5.3-v53"
+            echo "version_name=5.4"
             echo "target_sdk=36"
             echo "webrtc_tag=$WEBRTC_PROMOTED_TAG"
             echo "webrtc_production_sha256=$WEBRTC_PRODUCTION_SHA256"
@@ -384,30 +384,30 @@ jobs:
             echo "release_startup_android_11_and_16=PASS"
             echo "scanner_camera_qr_portrait_landscape_android_11_and_16=PASS"
             echo "packaged_manifest_orientation=PASS"
-          } > "$GITHUB_WORKSPACE/V53-RELEASE-CANDIDATE-EVIDENCE.txt"
+          } > "$GITHUB_WORKSPACE/V54-RELEASE-CANDIDATE-EVIDENCE.txt"
 
-          cat "$GITHUB_WORKSPACE/V53-RELEASE-CANDIDATE-EVIDENCE.txt"
+          cat "$GITHUB_WORKSPACE/V54-RELEASE-CANDIDATE-EVIDENCE.txt"
 
-      - name: Upload signed v53 APK
+      - name: Upload signed v54 APK
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v53_APK
-          path: app/build/outputs/apk/release/GEL_iDoctor_v5.3_signed.apk
+          name: GEL_iDoctor_v54_APK
+          path: app/build/outputs/apk/release/GEL_iDoctor_v5.4_signed.apk
           if-no-files-found: error
 
-      - name: Upload signed v53 AAB
+      - name: Upload signed v54 AAB
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v53_AAB
-          path: app/build/outputs/bundle/release/GEL_iDoctor_v5.3_signed.aab
+          name: GEL_iDoctor_v54_AAB
+          path: app/build/outputs/bundle/release/GEL_iDoctor_v5.4_signed.aab
           if-no-files-found: error
 
-      - name: Upload v53 release evidence and mapping
+      - name: Upload v54 release evidence and mapping
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v53_release_evidence
+          name: GEL_iDoctor_v54_release_evidence
           path: |
-            V53-RELEASE-CANDIDATE-EVIDENCE.txt
+            V54-RELEASE-CANDIDATE-EVIDENCE.txt
             app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
 
