@@ -301,7 +301,7 @@ jobs:
           "$BUILD_TOOLS/aapt2" dump badging "$APK" \
             | tee "$RUNNER_TEMP/v53-badging.txt"
 
-          grep -F "package: name='com.gel.iDoctor' versionCode='79' versionName='5.3-v53'" \
+          grep -F "package: name='com.gel.iDoctor' versionCode='80' versionName='5.3-v53'" \
             "$RUNNER_TEMP/v53-badging.txt"
 
           grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v53-badging.txt"
@@ -316,7 +316,7 @@ jobs:
           java -jar "$RUNNER_TEMP/bundletool.jar" dump manifest \
             --bundle=app/build/outputs/bundle/release/GEL_iDoctor_v5.3_signed.aab \
             > "$RUNNER_TEMP/v53-packaged-manifest.xml"
-          python3 tools/ci/verify_release_manifest.py "$RUNNER_TEMP/v53-packaged-manifest.xml" 79 5.3-v53
+          python3 tools/ci/verify_release_manifest.py "$RUNNER_TEMP/v53-packaged-manifest.xml" 80 5.3-v53
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump xmltree \
             app/build/outputs/apk/release/GEL_iDoctor_v5.3_signed.apk --file AndroidManifest.xml \
             > "$RUNNER_TEMP/v53-apk-manifest.txt"
@@ -367,7 +367,7 @@ jobs:
             echo
             echo "git_commit=$GITHUB_SHA"
             echo "application_id=com.gel.iDoctor"
-            echo "version_code=79"
+            echo "version_code=80"
             echo "version_name=5.3-v53"
             echo "target_sdk=36"
             echo "webrtc_tag=$WEBRTC_PROMOTED_TAG"
