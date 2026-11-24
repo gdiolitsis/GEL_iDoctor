@@ -11426,21 +11426,7 @@ private void runWifiDeepScan(WifiManager wm) {
                 logLabelValue(gr ? "Gateway" : "Gateway", gr ? "Δεν αναφέρθηκε" : "Not reported");
             }
 
-            // 4) Speed heuristic
-            WifiInfo info = wm.getConnectionInfo();
-            int link = info != null ? info.getLinkSpeed() : 0;
-            int rssi = info != null ? info.getRssi() : -80;
-
-            float speedSim = estimateSpeedSimMbps(link, rssi);
-            logLabelValue(
-                    gr ? "SpeedSim (όχι speed test)" : "SpeedSim (not a speed test)",
-                    Float.isNaN(speedSim)
-                            ? (gr ? "ΑΓΝΩΣΤΟ — ανεπαρκή στοιχεία PHY/RSSI" : "UNKNOWN — PHY/RSSI unavailable")
-                            : String.format(Locale.US,
-                                    gr ? "~%.2f Mbps (μη βαθμονομημένη εκτίμηση, όχι μέτρηση)"
-                                       : "~%.2f Mbps (uncalibrated estimate, not measured)", speedSim)
-            );
-
+            // Only measured Wi-Fi link metrics and verified network probes are reported.
 
             // Android 12+: report the security of the currently connected Wi-Fi link.
             // This is link-layer evidence, NOT a router audit or proof of total security.
@@ -17834,7 +17820,10 @@ lab14LogSave(
         partial,
         lab14_systemLimited,
         finalSag,
-        mahPerHour,
+        // Same start/end CHARGE_COUNTER-derived drain rate shown in Lab 14A.
+        (res.validDrain && res.durationMs > 0 && res.drainMah > 0)
+                ? (res.drainMah * 3600000.0) / res.durationMs
+                : Double.NaN,
         lab14BatteryBehaviourWarning,
         Float.isFinite(res.tempStart) && Float.isFinite(res.tempEnd)
                 ? res.tempEnd - res.tempStart : Float.NaN,
@@ -22916,12 +22905,8 @@ if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
 
     tempRise = endTemp[0] - startTemp[0];
 
-    // clamp negatives (sensor glitch / refresh lag)
-    if (tempRise < 0f) {
-        tempRise = 0f;
-    }
-
-    // ignore tiny sensor noise
+    // Cooling is a genuine signed change, not a zero rise.
+    // Ignore only tiny sensor noise.
     if (Math.abs(tempRise) < 0.1f) {
         tempRise = 0f;
     }
@@ -23006,15 +22991,11 @@ if (!Float.isNaN(perHour)) {
 // 🔴 THERMAL
 if (!Float.isNaN(tempRise)) {
 
-    String tempStr =
-            (tempRise < 0.1f)
-            ? "≈0.0°C"
-            : String.format(Locale.US, "%.1f°C", tempRise);
-
+    String tempStr = String.format(Locale.US, "%+.1f°C", tempRise);
     if (tempRise > 15f) {
-        logLabelWarnValue(gr ? "Άνοδος θερμοκρασίας" : "Temperature rise", tempStr);
+        logLabelWarnValue(gr ? "Μεταβολή θερμοκρασίας" : "Temperature change", tempStr);
     } else {
-        logLabelOkValue(gr ? "Άνοδος θερμοκρασίας" : "Temperature rise", tempStr);
+        logLabelOkValue(gr ? "Μεταβολή θερμοκρασίας" : "Temperature change", tempStr);
     }
 }
 
@@ -25668,11 +25649,11 @@ if (netCurrentSamples[0] >= 10) {
             gr ? "ρεύμα μπαταρίας" : "battery-side current");
     if (avgNetMa > 0.0) {
         logLabelOkValue(
-                gr ? "Μέσο καθαρό ρεύμα προς μπαταρία" : "Average net battery current",
+                gr ? "Μέσο στιγμιαίο ρεύμα μπαταρίας (δείγματα)" : "Mean instantaneous battery current (samples)",
                 batteryNetCurrent);
     } else {
         logLabelWarnValue(
-                gr ? "Μέσο καθαρό ρεύμα προς μπαταρία" : "Average net battery current",
+                gr ? "Μέσο στιγμιαίο ρεύμα μπαταρίας (δείγματα)" : "Mean instantaneous battery current (samples)",
                 batteryNetCurrent);
         logInfo(gr
                 ? "Οι δειγματοληψίες δεν δείχνουν θετικό καθαρό ρεύμα· η αιτία δεν εντοπίζεται."
@@ -25683,6 +25664,9 @@ if (netCurrentSamples[0] >= 10) {
             ? "Δεν υπάρχουν αρκετές έγκυρες ενδείξεις ρεύματος για πρόσθετη εκτίμηση."
             : "Not enough valid current readings for an additional estimate.");
 }
+logInfo(gr
+        ? "Το στιγμιαίο ρεύμα είναι μέση τιμή δειγμάτων Android. Η καθαρή αύξηση mAh προκύπτει χωριστά από τον μετρητή αρχής–τέλους. Οι δύο ενδείξεις μπορεί να διαφέρουν."
+        : "Instantaneous current is averaged from Android samples; net mAh gain comes from a separate start/end charge counter. These readings can differ.");
 logInfo(gr
         ? "Οι ενδείξεις αφορούν τη μπαταρία, όχι την πραγματική ισχύ εξόδου φορτιστή. Για έλεγχο φορτιστή ή καλωδίου, επαναλάβετε με άλλο συμβατό σετ σε παρόμοιες συνθήκες."
         : "These are battery-side readings, not actual charger output power. To compare charger or cable performance, repeat with a different compatible set under similar conditions.");
@@ -26621,7 +26605,7 @@ final boolean fresh16 =
                         observedClass);
             } else if ("Weak".equals(lab14StressClass)) {
                 // Measured under-load limitation, not a proven defect.
-                logLabelValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
+                logLabelInfoValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
                         observedClass);
             } else {
                 logLabelOkValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
@@ -26637,7 +26621,7 @@ final boolean fresh16 =
             String sagText = String.format(Locale.US, "%.3f V", lab14SagVolts);
             if (stressSagWarn) {
                 // Record the increased reading without asserting a failure.
-                logLabelValue(gr ? "Πτώση τάσης Lab 14A" : "Lab 14A voltage sag",
+                logLabelInfoValue(gr ? "Πτώση τάσης Lab 14A" : "Lab 14A voltage sag",
                         sagText);
             } else {
                 logLabelOkValue(gr ? "Πτώση τάσης Lab 14A" : "Lab 14A voltage sag",
@@ -32992,8 +32976,8 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                    : "Unavailable. The other Lab 27 checks remain unaffected.");
     }
     logLabelValue(gr ? "Όριο συμπεράσματος" : "Conclusion limitation",
-            gr ? "Συμφωνία χαρακτηριστικών δεν αποδεικνύει γνήσια εξαρτήματα, νόμιμη κυριότητα ή καλή λειτουργία."
-               : "Matching characteristics do not prove genuine parts, legal ownership or functional health.");
+            gr ? "Συμφωνία χαρακτηριστικών δεν αποδεικνύει γνήσια εξαρτήματα ή νόμιμη κυριότητα. Η καλή λειτουργία αξιολογείται χωριστά από τα υποχρεωτικά εργαστήρια του Lab 27."
+               : "Matching characteristics do not prove genuine parts or legal ownership. Functional health is assessed separately through mandatory Lab 27 diagnostics.");
     logLine();
 
 
@@ -33522,8 +33506,8 @@ private void lab31FinalSummary() {
 
     if (errors == 0 && warnings == 0) {
         logLabelValue(gr ? "Ευρήματα προς έλεγχο" : "Findings for review",
-                gr ? "Δεν καταγράφηκαν προειδοποιήσεις ή αστοχίες στο διαθέσιμο αρχείο."
-                   : "No warnings or failures were recorded in the available log.");
+                gr ? "Δεν καταγράφηκαν προειδοποιήσεις ή αστοχίες στις διαθέσιμες καταγραφές της τρέχουσας συνεδρίας. Παλαιότερα ευρήματα άλλων συνεδριών δεν αξιολογούνται εδώ."
+                   : "No warnings or failures were recorded in the available current-session log. Findings from prior sessions are not evaluated here.");
     } else {
         if (errors > 0) {
             appendHtml("<br>");

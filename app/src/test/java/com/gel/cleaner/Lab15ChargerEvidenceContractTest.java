@@ -40,7 +40,7 @@ public final class Lab15ChargerEvidenceContractTest {
         assertTrue(s.contains("currentUa != 0L"));
         assertTrue(s.contains("netCurrentSamples[0] >= 10"));
         assertTrue(s.contains("logLabelOkValue(gr ? \"Πηγή φόρτισης\""));
-        assertTrue(s.contains("Μέσο καθαρό ρεύμα προς μπαταρία"));
+        assertTrue(s.contains("Μέσο στιγμιαίο ρεύμα μπαταρίας (δείγματα)"));
         assertTrue(s.contains("logLabelWarnValue("));
         assertTrue(s.contains("δεν πιστοποιεί φορτιστή ή καλώδιο"));
         assertTrue(s.contains("όχι την πραγματική ισχύ εξόδου φορτιστή"));
