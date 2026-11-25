@@ -2195,7 +2195,10 @@ ByteArrayOutputStream bos = new ByteArrayOutputStream();
 pdf.writeTo(bos);
 pdf.close();
 
-Uri uri = savePdfToDownloads("GEL_Service_Report.pdf", bos.toByteArray());
+String pdfName = remoteSessionId == null
+        ? "GEL_Service_Report.pdf"
+        : "GEL_Customer_Service_Report_" + remoteSessionId.replaceAll("[^A-Za-z0-9_-]", "") + ".pdf";
+Uri uri = savePdfToDownloads(pdfName, bos.toByteArray());
 consumeSingleReportCreditIfNeeded();
 presentPdf(uri);
 
