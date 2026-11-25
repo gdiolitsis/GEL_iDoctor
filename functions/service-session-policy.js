@@ -26,7 +26,21 @@ function clampServiceEnd(connectedAtMs, now = Date.now()) {
   return Math.min(connectedAtMs + SERVICE_MAX_MS, now + SERVICE_MAX_MS);
 }
 
+// Only server-verified paid Google Play access qualifies, not Tester/Gift/Trial.
+function paidUntil(account, now = Date.now()) {
+  const until = Number(account?.verifiedUntil) || 0;
+  return Number.isFinite(until) && until > now ? until : 0;
+}
+
+function paidServiceDeadline(connectedAtMs, technicianUntil, customerUntil) {
+  if (!Number.isFinite(connectedAtMs) || connectedAtMs <= 0) return 0;
+  if (!Number.isFinite(technicianUntil) || technicianUntil <= connectedAtMs ||
+      !Number.isFinite(customerUntil) || customerUntil <= connectedAtMs) return 0;
+  return Math.min(connectedAtMs + SERVICE_MAX_MS, technicianUntil, customerUntil);
+}
+
 module.exports = {
   SERVICE_MAX_MS, REMOTE_CONTROL_ENABLED, serviceUntilMs,
+  paidUntil, paidServiceDeadline,
   serviceActive, clampServiceEnd,
 };
