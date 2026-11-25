@@ -137,12 +137,10 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
                             : "Pair via QR / Service Code • Read-only results • 8 hours"
             );
 
-            repairBtn.setOnClickListener(v ->
-                    startActivity(new Intent(
-                            this,
-                            RepairDeviceActivity.class
-                    ))
-            );
+            repairBtn.setOnClickListener(v -> {
+                if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) return;
+                startActivity(new Intent(this, RepairDeviceActivity.class));
+            });
 
             root.addView(repairBtn);
 
@@ -155,16 +153,14 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
                             ? "Σύνδεση με Τεχνικό"
                             : "Connect to Technician",
                     gr
-                            ? "Προσωρινή δωρεάν πρόσβαση εργαστηρίων μέσω τεχνικού • έως 8 ώρες"
-                            : "Temporary free diagnostic access via technician • up to 8 hours"
+                            ? "Απαιτείται ενεργή συνδρομή GEL PRO · διαγνωστική σύνδεση με τεχνικό • έως 8 ώρες"
+                            : "Active paid GEL PRO subscription required · connect with technician • up to 8 hours"
             );
 
-            connectTechnicianBtn.setOnClickListener(v ->
-                    startActivity(new Intent(
-                            this,
-                            ConnectToTechnicianActivity.class
-                    ))
-            );
+            connectTechnicianBtn.setOnClickListener(v -> {
+                if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) return;
+                startActivity(new Intent(this, ConnectToTechnicianActivity.class));
+            });
 
                 root.addView(connectTechnicianBtn);
             }
