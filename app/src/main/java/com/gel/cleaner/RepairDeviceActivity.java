@@ -162,10 +162,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         buildScreen();
 
-        if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) {
-            return;
-        }
-        restoreExistingSession();
+        GELServiceSubscriptionGate.requireTechnicianAccess(this,
+                this::restoreExistingSession);
 
         UIHelpers.applyPressEffectRecursive(
                 getWindow().getDecorView()
@@ -704,11 +702,11 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // CREATE SERVICE SESSION — REAL FIREBASE BACKEND
     // ============================================================
     private void createServiceSession() {
+        GELServiceSubscriptionGate.requireTechnicianAccess(this,
+                this::createAuthorizedServiceSession);
+    }
 
-        if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) {
-            return;
-        }
-
+    private void createAuthorizedServiceSession() {
         stopSessionListener();
 
         txtStatus.setText(
@@ -1663,8 +1661,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // GEL PRO
     // ============================================================
     private boolean isGelProActive() {
-        // Service pairing is strictly paid; tester, gift and trial do not qualify.
-        return GelProEntitlement.isPaidProActive(this);
+        // Only paid GEL PRO or verified administrator Gift FULL ACCESS.
+        return GelProEntitlement.isPaidProActive(this) || GelAccountPro.active(this);
     }
 
     private void showGelProRequiredDialog() {
