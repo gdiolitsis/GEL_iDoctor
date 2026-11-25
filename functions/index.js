@@ -936,11 +936,13 @@ exports.appendDiagnosticBatch =
       }
 
       const sanitizedLines = [];
+      const sanitizedStyles = [];
+      const inputStyles = Array.isArray(data.styles) &&
+          data.styles.length === data.lines.length ? data.styles : [];
       let totalChars = 0;
 
-      for (
-        const raw of data.lines
-      ) {
+      for (let lineIndex = 0; lineIndex < data.lines.length; lineIndex++) {
+        const raw = data.lines[lineIndex];
         if (
           typeof raw !==
           "string"
@@ -981,12 +983,17 @@ exports.appendDiagnosticBatch =
           break;
         }
 
-        sanitizedLines.push(
-          line
-        );
-
-        totalChars +=
-          line.length;
+        sanitizedLines.push(line);
+        const style = inputStyles[lineIndex];
+        const rawColor = style && typeof style.valueColor === 'string'
+          ? style.valueColor : '';
+        const valueColor = /^#[0-9A-Fa-f]{6}$/.test(rawColor)
+          ? rawColor.toUpperCase() : '';
+        const rawOffset = Number(style?.valueStart);
+        const valueStart = Number.isSafeInteger(rawOffset) &&
+          rawOffset >= 0 && rawOffset < line.length ? rawOffset : -1;
+        sanitizedStyles.push({valueColor, valueStart});
+        totalChars += line.length;
       }
 
       if (
@@ -1078,6 +1085,9 @@ exports.appendDiagnosticBatch =
 
         lines:
           sanitizedLines,
+        // Optional exact customer-side PDF value evidence; never infer from
+        // text or numerical thresholds, and never accept arbitrary HTML.
+        styles: sanitizedStyles,
 
         customerUid,
 
