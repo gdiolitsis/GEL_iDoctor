@@ -18,12 +18,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -36,6 +40,10 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.Timestamp;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.common.BitMatrix;
 
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
@@ -71,6 +79,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
     private static final String KEY_SESSION_CONNECTED =
             "session_connected";
+    private static final String KEY_SERVICE_ENDS_AT = "service_ends_at";
 
     private static final String FUNCTIONS_REGION =
             "europe-west1";
@@ -97,6 +106,14 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private TextView txtServiceCode;
     private TextView txtExpiry;
     private TextView txtQrPlaceholder;
+    private ImageView qrImage;
+    private final Handler clockHandler = new Handler(Looper.getMainLooper());
+    private final Runnable clockTick = new Runnable() {
+        @Override public void run() {
+            updateServiceExpiry();
+            clockHandler.postDelayed(this, 30_000L);
+        }
+    };
 
     private Button btnCreateSession;
     private Button btnCopyCode;
@@ -155,6 +172,17 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     // MAIN SCREEN
     // ============================================================
+    @Override protected void onResume() {
+        super.onResume();
+        clockHandler.removeCallbacks(clockTick);
+        clockHandler.post(clockTick);
+    }
+
+    @Override protected void onPause() {
+        clockHandler.removeCallbacks(clockTick);
+        super.onPause();
+    }
+
     private void buildScreen() {
 
         ScrollView scroll = new ScrollView(this);
@@ -185,8 +213,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         title.setText(
                 gr
-                        ? "Απομακρυσμένη Διάγνωση & Υποστήριξη Συσκευής"
-                        : "Remote Device Diagnostics & Support"
+                        ? "Σύνδεση με Πελάτη — Διαγνωστικά"
+                        : "Connect to Customer — Diagnostics"
         );
 
         title.setTextColor(
@@ -219,8 +247,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         subtitle.setText(
                 gr
-                        ? "Επαγγελματική σύνδεση και διάγνωση συσκευής πελάτη"
-                        : "Professional customer-device connection and diagnostics"
+                        ? "Σύνδεση έως 8 ώρες για λήψη διαγνωστικών, χωρίς χειρισμό."
+                        : "Read-only diagnostics for up to 8 hours. No device control."
         );
 
         subtitle.setTextColor(
@@ -385,7 +413,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         // ========================================================
         root.addView(
                 sectionLabel(
-                        "GEL REMOTE ASSIST"
+                        "ΔΙΑΓΝΩΣΤΙΚΑ — ΜΟΝΟ ΑΝΑΓΝΩΣΗ"
                 )
         );
 
@@ -405,8 +433,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         txtRemoteControlStatus.setText(
                 gr
-                        ? "Αναμονή για CONNECTED συσκευή πελάτη."
-                        : "Waiting for CONNECTED customer device."
+                        ? "Αναμονή σύνδεσης πελάτη για λήψη διαγνωστικών."
+                        : "Waiting for customer connection and diagnostic logs."
         );
 
         remoteControlCard.addView(
@@ -416,8 +444,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         btnEnterRemoteMode =
                 makeActionButton(
                         gr
-                                ? "Άνοιγμα GEL Remote Assist"
-                                : "Open GEL Remote Assist"
+                                ? "Προβολή αποτελεσμάτων πελάτη"
+                                : "View customer diagnostic results"
                 );
 
         btnEnterRemoteMode.setVisibility(
@@ -425,7 +453,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         );
 
         btnEnterRemoteMode.setOnClickListener(
-                v -> openRemoteDeviceMode()
+                v -> openReadOnlyResults()
         );
 
         remoteControlCard.addView(
@@ -512,6 +540,17 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         root.addView(
                 txtQrPlaceholder
         );
+
+        qrImage = new ImageView(this);
+        qrImage.setAdjustViewBounds(true);
+        qrImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams qrParams =
+                new LinearLayout.LayoutParams(dp(240), dp(240));
+        qrParams.gravity = Gravity.CENTER_HORIZONTAL;
+        qrParams.setMargins(0, dp(4), 0, dp(12));
+        qrImage.setLayoutParams(qrParams);
+        qrImage.setVisibility(View.GONE);
+        root.addView(qrImage);
 
         // ========================================================
         // COPY CODE
@@ -724,7 +763,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         firebaseFunctions
                 .getHttpsCallable("createServiceSession")
-                .call()
+                .call(java.util.Collections.singletonMap(
+                        "deviceId", GelTrialAccess.deviceId(this)))
                 .addOnCompleteListener(
                         this,
                         task -> {
@@ -855,8 +895,15 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
             return;
         }
 
-        // The two-hour expiry only limits PAIRING. Once CONNECTED, the
-        // Service Session remains valid until it is explicitly ended.
+        // Two hours to pair; after pairing, eight hours of diagnostic access.
+        if (connected &&
+                prefs.getLong(KEY_SERVICE_ENDS_AT, 0L) <= System.currentTimeMillis()) {
+            requestExpiredServerTransition(sessionId);
+            stopSessionListener();
+            clearStoredSession();
+            showNoSessionState();
+            return;
+        }
         if (!connected &&
                 System.currentTimeMillis() >= pairingExpires) {
 
@@ -912,24 +959,35 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                                     String status = snapshot.getString("status");
 
                                     if ("CONNECTED".equals(status)) {
+                                        Timestamp deadline = snapshot.getTimestamp("serviceEndsAt");
+                                        long serviceEndMs = deadline != null
+                                                ? deadline.toDate().getTime() : 0L;
+                                        if (serviceEndMs <= System.currentTimeMillis()) {
+                                            requestExpiredServerTransition(sessionId);
+                                            stopSessionListener();
+                                            clearStoredSession();
+                                            showNoSessionState();
+                                            return;
+                                        }
 
                                         getSharedPreferences(SESSION_PREFS, MODE_PRIVATE)
                                                 .edit()
                                                 .putBoolean(KEY_FIREBASE_BACKED, true)
-                                                .putBoolean(KEY_SESSION_CONNECTED, true)
+                                                 .putBoolean(KEY_SESSION_CONNECTED, true)
+                                                .putLong(KEY_SERVICE_ENDS_AT, serviceEndMs)
                                                 .apply();
 
                                         txtStatus.setText(
                                                 gr
-                                                        ? "● ΣΥΝΔΕΘΗΚΕ ΣΥΣΚΕΥΗ ΠΕΛΑΤΗ\nΤο GEL Remote Assist είναι διαθέσιμο."
-                                                        : "● CUSTOMER DEVICE CONNECTED\nGEL Remote Assist is available."
+                                                        ? "● ΣΥΝΔΕΘΗΚΕ ΠΕΛΑΤΗΣ\nΛήψη διαγνωστικών μόνο, χωρίς απομακρυσμένο χειρισμό."
+                                                        : "● CUSTOMER CONNECTED\nRead-only diagnostics; no remote control."
                                         );
                                         txtStatus.setTextColor(0xFF39FF14);
 
                                         txtExpiry.setText(
                                                 gr
-                                                        ? "Η συσκευή πελάτη συνδέθηκε επιτυχώς στο Service Session."
-                                                        : "Customer device successfully connected to the Service Session."
+                                                        ? "Διαγνωστική συνεδρία: έως 8 ώρες."
+                                                        : "Diagnostic session: up to 8 hours."
                                         );
 
                                         GELRemoteTargetManager.syncAvailability(this);
@@ -1031,16 +1089,10 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                         : "Pairing code valid until " + expiryText
         );
 
-        txtQrPlaceholder.setText(
-                gr
-                        ? "QR CODE\n\n"
-                        + "Το QR pairing θα ενεργοποιηθεί στο επόμενο βήμα.\n\n"
-                        + "Προς το παρόν η σύνδεση προετοιμάζεται με τον 6ψήφιο Service Code."
-                        :
-                        "QR CODE\n\n"
-                        + "QR pairing will be activated in the next step.\n\n"
-                        + "For now, pairing is prepared using the 6-digit Service Code."
-        );
+        txtQrPlaceholder.setText(gr
+                ? "Σαρώστε το QR ή χρησιμοποιήστε τον 6ψήφιο Service Code."
+                : "Scan the QR or enter the six-digit Service Code.");
+        showSmartQr(sessionId, serviceCode, pairingExpires);
 
         btnCreateSession.setVisibility(
                 View.GONE
@@ -1057,6 +1109,57 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         btnCancelSession.setVisibility(
                 View.VISIBLE
         );
+    }
+
+    private void showSmartQr(String id, String code, long pairingExpires) {
+        if (qrImage == null) return;
+        try {
+            String payload = GELSmartServiceLink.buildSmartLink(id, code, pairingExpires);
+            BitMatrix bits = new MultiFormatWriter().encode(
+                    payload, BarcodeFormat.QR_CODE, 320, 320);
+            Bitmap bitmap = Bitmap.createBitmap(320, 320, Bitmap.Config.ARGB_8888);
+            for (int y = 0; y < 320; y++) {
+                for (int x = 0; x < 320; x++) {
+                    bitmap.setPixel(x, y, bits.get(x, y) ? Color.BLACK : Color.WHITE);
+                }
+            }
+            qrImage.setImageBitmap(bitmap);
+            qrImage.setVisibility(View.VISIBLE);
+        } catch (Exception ignored) {
+            qrImage.setVisibility(View.GONE);
+            txtQrPlaceholder.setText(AppLang.isGreek(this)
+                    ? "Χρησιμοποιήστε τον 6ψήφιο κωδικό σύνδεσης."
+                    : "Use the six-digit Service Code.");
+        }
+    }
+
+    private void updateServiceExpiry() {
+        SharedPreferences p = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
+        if (!p.getBoolean(KEY_SESSION_CONNECTED, false)) return;
+        String id = p.getString(KEY_SESSION_ID, null);
+        long deadline = p.getLong(KEY_SERVICE_ENDS_AT, 0L);
+        if (deadline <= System.currentTimeMillis()) {
+            requestExpiredServerTransition(id);
+            stopSessionListener();
+            clearStoredSession();
+            showNoSessionState();
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η οκτάωρη σύνδεση του πελάτη έληξε."
+                    : "The eight-hour customer session has expired.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        long minutes = (deadline - System.currentTimeMillis() + 59_999L) / 60_000L;
+        txtExpiry.setText(AppLang.isGreek(this)
+                ? "Διαγνωστική συνεδρία: απομένουν " + minutes + " λεπτά."
+                : "Diagnostic session: " + minutes + " minutes remaining.");
+    }
+
+    private void requestExpiredServerTransition(String id) {
+        if (id == null || id.trim().isEmpty()) return;
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("sessionId", id);
+        firebaseFunctions.getHttpsCallable("expireServiceSession").call(data);
     }
 
     // ============================================================
@@ -1102,6 +1205,11 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                 ""
         );
 
+        if (qrImage != null) {
+            qrImage.setImageDrawable(null);
+            qrImage.setVisibility(View.GONE);
+        }
+
         txtQrPlaceholder.setText(
                 gr
                         ? "Δημιουργήστε Service Session για να εμφανιστεί QR / Service Code."
@@ -1128,30 +1236,17 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     // REMOTE DEVICE MODE — TECHNICIAN CONTROL
     // ============================================================
-    private void openRemoteDeviceMode() {
-
-        if (!GELRemoteTargetManager.enterRemoteMode(this)) {
-
-            Toast.makeText(
-                    this,
-                    gr
-                            ? "Δεν υπάρχει CONNECTED συσκευή πελάτη."
-                            : "No CONNECTED customer device.",
-                    Toast.LENGTH_LONG
-            ).show();
-
+    private void openReadOnlyResults() {
+        SharedPreferences p = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
+        String id = p.getString(KEY_SESSION_ID, null);
+        if (!p.getBoolean(KEY_SESSION_CONNECTED, false) || id == null ||
+                p.getLong(KEY_SERVICE_ENDS_AT, 0L) <= System.currentTimeMillis()) {
+            Toast.makeText(this, gr ? "Δεν υπάρχει ενεργή σύνδεση πελάτη."
+                    : "No live customer connection.", Toast.LENGTH_LONG).show();
             return;
         }
-
-        Intent intent =
-                new Intent(
-                        this,
-                        GELRemoteAssistActivity.class
-                );
-
-        startActivity(
-                intent
-        );
+        startActivity(new Intent(this, GELReadOnlyDiagnosticsActivity.class)
+                .putExtra("sessionId", id));
     }
 
     private void showRemoteControlReady() {
@@ -1164,8 +1259,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         txtRemoteControlStatus.setText(
                 gr
-                        ? "● READY — Ζωντανή εικόνα και χειρισμός ΜΟΝΟ μέσα στο GEL iDoctor."
-                        : "● READY — Live view and control ONLY inside GEL iDoctor."
+                        ? "● ΕΤΟΙΜΟ — Διαγνωστικά πελάτη μόνο για ανάγνωση."
+                        : "● READY — Read-only customer diagnostic results."
         );
 
         txtRemoteControlStatus.setTextColor(
@@ -1187,8 +1282,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         txtRemoteControlStatus.setText(
                 gr
-                        ? "Αναμονή για CONNECTED συσκευή πελάτη."
-                        : "Waiting for CONNECTED customer device."
+                        ? "Αναμονή σύνδεσης πελάτη για λήψη διαγνωστικών."
+                        : "Waiting for customer connection and diagnostic logs."
         );
 
         txtRemoteControlStatus.setTextColor(
