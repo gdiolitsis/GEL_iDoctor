@@ -1170,6 +1170,12 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                             if (!task.isSuccessful() ||
                                     task.getResult() == null) {
 
+                                if (task.getException() instanceof com.google.firebase.functions.FirebaseFunctionsException
+                                        && ((com.google.firebase.functions.FirebaseFunctionsException) task.getException())
+                                            .getCode() == com.google.firebase.functions.FirebaseFunctionsException.Code.PERMISSION_DENIED) {
+                                    GELServiceSubscriptionGate.showRequired(this);
+                                }
+
                                 String message =
                                         task.getException() != null
                                                 ? task.getException().getMessage()
