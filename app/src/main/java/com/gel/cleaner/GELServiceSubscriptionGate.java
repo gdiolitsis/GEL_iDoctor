@@ -8,15 +8,40 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 
-/** Guard only technician-owned Service Session creation with paid Play PRO. */
+/** Guard technician session creation with paid PRO or verified Google Gift FULL ACCESS. */
 public final class GELServiceSubscriptionGate {
     private GELServiceSubscriptionGate() {}
 
-    public static boolean requirePaidSubscription(Activity activity) {
-        if (activity == null || activity.isFinishing()) return false;
-        if (GelProEntitlement.isPaidProActive(activity)) return true;
+    /**
+     * Technician can create sessions when Play PRO is active or a verified
+     * administrator-granted Google Gift FULL ACCESS is active. Tester and
+     * trial licenses do not authorize technician session creation.
+     *
+     * If a Google gift's local short cache expired, refresh online before
+     * rejecting it. The server independently checks the gift on creation.
+     */
+    public static void requireTechnicianAccess(Activity activity, Runnable allowed) {
+        if (activity == null || activity.isFinishing() || allowed == null) return;
+        if (GelProEntitlement.isPaidProActive(activity) ||
+                GelAccountPro.active(activity)) {
+            allowed.run();
+            return;
+        }
+        com.google.firebase.auth.FirebaseUser user =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null && !user.isAnonymous() && user.isEmailVerified()) {
+            GelAccountPro.refresh(activity, (active, message) ->
+                    activity.runOnUiThread(() -> {
+                        if (activity.isFinishing() || activity.isDestroyed()) return;
+                        if (active || GelProEntitlement.isPaidProActive(activity)) {
+                            allowed.run();
+                        } else {
+                            showRequired(activity);
+                        }
+                    }));
+            return;
+        }
         showRequired(activity);
-        return false;
     }
 
     public static void showRequired(Activity activity) {
@@ -24,16 +49,17 @@ public final class GELServiceSubscriptionGate {
         final boolean gr = AppLang.isGreek(activity);
         AlertDialog dialog = new AlertDialog.Builder(activity,
                 androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
-                .setTitle(gr ? "ΑΠΑΙΤΕΙΤΑΙ ΣΥΝΔΡΟΜΗ GEL PRO" : "GEL PRO SUBSCRIPTION REQUIRED")
+                .setTitle(gr ? "ΑΠΑΙΤΕΙΤΑΙ GEL PRO Ή FULL ACCESS" : "GEL PRO OR FULL ACCESS REQUIRED")
                 .setMessage(gr
-                        ? "Η δημιουργία σύνδεσης με πελάτη απαιτεί ενεργή συνδρομή GEL PRO από τον τεχνικό. Ο πελάτης συνδέεται δωρεάν με QR ή κωδικό. "
-                          + "Η πρόσβαση Tester, Gift ή η δοκιμαστική πρόσβαση δεν αρκούν για αυτή τη λειτουργία. "
-                          + "Μπορείτε να ενεργοποιήσετε ή να επαναφέρετε τη συνδρομή σας."
+                        ? "Για δημιουργία συνεδρίας τεχνικού απαιτείται ενεργή συνδρομή GEL PRO "
+                          + "ή εγκεκριμένη δωρεάν FULL ACCESS μέσω Google. Ο πελάτης συνδέεται δωρεάν. "
+                          + "Οι κωδικοί Tester και η δοκιμαστική πρόσβαση δεν αρκούν. "
+                          + "Μπορείτε να ελέγξετε το FULL ACCESS ή να επαναφέρετε τη συνδρομή σας."
                         : "Creating a customer Service Session requires a paid GEL PRO subscription for the technician. The customer joins for free with QR or code. "
                           + "Tester, Gift and Trial access cannot create technician sessions. "
                           + "You can subscribe or restore your existing Play purchase.")
                 .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
-                .setPositiveButton(gr ? "Συνδρομή GEL PRO" : "GEL PRO subscription",
+                .setPositiveButton(gr ? "Έλεγχος FULL ACCESS / PRO" : "Check FULL ACCESS / PRO",
                         (d, w) -> activity.startActivity(
                                 new Intent(activity, GelProAccountActivity.class)))
                 .create();
