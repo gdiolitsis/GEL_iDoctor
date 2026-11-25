@@ -14,6 +14,8 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.view.Gravity;
@@ -79,6 +81,22 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
     private FirebaseFirestore firebaseFirestore;
     private ListenerRegistration sessionListener;
 
+    // A local timer enforces expiry even when no Firestore event arrives.
+    private final Handler serviceClock = new Handler(Looper.getMainLooper());
+    private final Runnable serviceTick = new Runnable() {
+        @Override public void run() {
+            if (isStoredCustomerSessionConnected()) {
+                if (!GELCustomerServiceAccess.isActive(ConnectToTechnicianActivity.this)) {
+                    requestExpiredServerTransition();
+                    handleCustomerSessionEnded("EXPIRED");
+                } else {
+                    updateConnectedExpiryText();
+                }
+            }
+            serviceClock.postDelayed(this, 30_000L);
+        }
+    };
+
     private boolean pairingInProgress = false;
     private boolean customerSessionEndInProgress = false;
 
@@ -134,6 +152,10 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
         buildScreen();
 
+        if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) {
+            // Including Smart QR/deep-link launches. No automatic claim is made.
+            return;
+        }
         restoreStoredCustomerSession();
 
         UIHelpers.applyPressEffectRecursive(
@@ -153,6 +175,26 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                     )
             );
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        serviceClock.removeCallbacks(serviceTick);
+        serviceClock.post(serviceTick);
+        // Paid subscription is required for the entire connected session.
+        if (isStoredCustomerSessionConnected() &&
+                !GelProEntitlement.isPaidProActive(this)) {
+            requestExpiredServerTransition();
+            handleCustomerSessionEnded("SUBSCRIPTION_REQUIRED");
+            GELServiceSubscriptionGate.showRequired(this);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        serviceClock.removeCallbacks(serviceTick);
+        super.onPause();
     }
 
     @Override
@@ -203,16 +245,18 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                         0L
                 );
 
+        if (!GELCustomerServiceAccess.isActive(this)) {
+            requestExpiredServerTransition();
+            handleCustomerSessionEnded("EXPIRED");
+            return;
+        }
+
         showConnectedState(
                 sessionId.trim(),
                 serviceCode != null
                         ? serviceCode
                         : "------",
                 expiresAt
-        );
-
-        GELRemoteCommandService.ensureRunning(
-                this
         );
 
         attachConnectedSessionListener(
@@ -963,14 +1007,44 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
     // ============================================================
     // REAL FIREBASE CLAIM
     // ============================================================
+    private boolean consentDialogOpen;
+
     private void claimServiceSession(
             @Nullable String sessionId,
             String serviceCode,
             long qrExpiresAt
     ) {
+        if (!GELServiceSubscriptionGate.requirePaidSubscription(this) ||
+                pairingInProgress || consentDialogOpen) return;
 
-        if (pairingInProgress) {
+        // Explicit consent for sharing diagnostic logs; QR links never silently
+        // start data transfer or enable remote screen/command control.
+        consentDialogOpen = true;
+        AlertDialog consent = new AlertDialog.Builder(this)
+                .setTitle(gr ? "ΣΥΝΔΕΣΗ ΜΕ ΤΕΧΝΙΚΟ" : "CONNECT TO TECHNICIAN")
+                .setMessage(gr
+                        ? "Με τη σύνδεση, τα διαγνωστικά logs που θα παράγει το GEL iDoctor "
+                          + "θα κοινοποιούνται στον συνδεδεμένο τεχνικό μέσω Firebase "
+                          + "για έως 8 ώρες. Δεν επιτρέπεται απομακρυσμένος χειρισμός "
+                          + "της συσκευής. Μπορείτε να τερματίσετε τη συνεδρία ανά πάσα στιγμή."
+                        : "By connecting, the GEL iDoctor diagnostic logs generated during "
+                          + "the session will be shared with the paired technician through "
+                          + "Firebase for up to eight hours. No remote device control is "
+                          + "enabled. You may terminate the session at any time.")
+                .setNegativeButton(gr ? "ΑΚΥΡΩΣΗ" : "CANCEL", null)
+                .setPositiveButton(gr ? "ΣΥΝΔΕΣΗ & ΚΟΙΝΟΠΟΙΗΣΗ" : "CONNECT & SHARE",
+                        (dialog, which) -> beginClaimServiceSession(sessionId, serviceCode, qrExpiresAt))
+                .create();
+        consent.setOnDismissListener(d -> consentDialogOpen = false);
+        consent.show();
+    }
 
+    private void beginClaimServiceSession(
+            @Nullable String sessionId,
+            String serviceCode,
+            long qrExpiresAt
+    ) {
+        if (pairingInProgress || !GELServiceSubscriptionGate.requirePaidSubscription(this)) {
             return;
         }
 
@@ -1122,6 +1196,12 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                             if (!task.isSuccessful() ||
                                     task.getResult() == null) {
 
+                                if (task.getException() instanceof com.google.firebase.functions.FirebaseFunctionsException
+                                        && ((com.google.firebase.functions.FirebaseFunctionsException) task.getException())
+                                            .getCode() == com.google.firebase.functions.FirebaseFunctionsException.Code.PERMISSION_DENIED) {
+                                    GELServiceSubscriptionGate.showRequired(this);
+                                }
+
                                 String message =
                                         task.getException() != null
                                                 ? task.getException().getMessage()
@@ -1186,6 +1266,8 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                     result.get(
                                             "expiresAt"
                                     );
+                            Object serviceExpiryRaw = result.get("serviceEndsAt");
+                            Object serverNowRaw = result.get("serverNowMs");
 
                             Object statusRaw =
                                     result.get(
@@ -1195,6 +1277,8 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                             if (!(sessionRaw instanceof String) ||
                                     !(codeRaw instanceof String) ||
                                     !(expiryRaw instanceof Number) ||
+                                    !(serviceExpiryRaw instanceof Number) ||
+                                    !(serverNowRaw instanceof Number) ||
                                     !(statusRaw instanceof String)) {
 
                                 showPairingError(
@@ -1230,6 +1314,16 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                 return;
                             }
 
+                            // Grant only a server-issued, max-8-hour lease.
+                            if (!GELCustomerServiceAccess.grant(
+                                    this, connectedSessionId,
+                                    ((Number) serviceExpiryRaw).longValue(),
+                                    ((Number) serverNowRaw).longValue())) {
+                                showPairingError(gr
+                                        ? "Δεν επαληθεύτηκε το οκτάωρο δικαίωμα διάγνωσης."
+                                        : "The eight-hour diagnostic lease was not verified.");
+                                return;
+                            }
                             saveConnectedCustomerSession(
                                     connectedSessionId,
                                     connectedServiceCode,
@@ -1242,11 +1336,8 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                     expiresAt
                             );
 
-                            // Start the visible customer-side remote command
-                            // transport immediately after successful pairing.
-                            GELRemoteCommandService.ensureRunning(
-                                    this
-                            );
+                            // Read-only: no remote commands or screen-control service.
+                            GELRemoteDiagnosticsSync.start(this);
 
                             attachConnectedSessionListener(
                                     connectedSessionId
@@ -1309,29 +1400,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                 serviceCode
         );
 
-        long remainingMs =
-                Math.max(
-                        0L,
-                        expiresAt - System.currentTimeMillis()
-                );
-
-        long remainingMinutes =
-                remainingMs / 60000L;
-
-        txtExpiry.setText(
-                gr
-                        ? "Η συσκευή συνδέθηκε επιτυχώς. "
-                        + "Ο pairing code παραμένει έγκυρος για περίπου "
-                        + remainingMinutes
-                        + " λεπτά, αλλά το ενεργό Service Session δεν διακόπτεται από τη λήξη του code. "
-                        + "Μπορείτε να τερματίσετε το Session οποιαδήποτε στιγμή."
-                        :
-                        "Device connected successfully. "
-                        + "The pairing code remains valid for approximately "
-                        + remainingMinutes
-                        + " minutes, but the active Service Session is not terminated by code expiry. "
-                        + "You can end the Session at any time."
-        );
+        updateConnectedExpiryText();
 
         if (btnEndSession != null) {
             btnEndSession.setVisibility(
@@ -1639,6 +1708,10 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                             );
 
                                     if ("CONNECTED".equals(status)) {
+                                        if (!GELCustomerServiceAccess.isActive(this)) {
+                                            requestExpiredServerTransition();
+                                            handleCustomerSessionEnded("EXPIRED");
+                                        }
                                         return;
                                     }
 
@@ -1649,6 +1722,27 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                     );
                                 }
                         );
+    }
+
+    private void updateConnectedExpiryText() {
+        if (txtExpiry == null) return;
+        long minutes = (GELCustomerServiceAccess.remainingMs(this) + 59_999L) / 60_000L;
+        txtExpiry.setText(gr
+                ? "Προσωρινή πρόσβαση διαγνωστικών: απομένουν " + minutes
+                  + " λεπτά (μέγιστο 8 ώρες από τη σύνδεση). "
+                  + "Μπορείτε να τερματίσετε τη σύνδεση οποιαδήποτε στιγμή."
+                : "Temporary diagnostic access: " + minutes
+                  + " minutes remaining (maximum 8 hours after connection). "
+                  + "You may end the session at any time.");
+    }
+
+    private void requestExpiredServerTransition() {
+        String id = getSharedPreferences(CUSTOMER_SESSION_PREFS, MODE_PRIVATE)
+                .getString(KEY_SESSION_ID, null);
+        if (id == null || id.trim().isEmpty()) return;
+        java.util.Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("sessionId", id);
+        firebaseFunctions.getHttpsCallable("expireServiceSession").call(payload);
     }
 
     private void handleCustomerSessionEnded(

@@ -107,10 +107,74 @@ public class ServiceReportActivity extends GELAutoActivityHook {
     private static final String KEY_TAX_OFFICE = "tax_office";
 
     private ImageView proLogoPreview;
+    // Strictly isolate customer-session data from the technician's local log.
+    private String remoteSessionId;
+    private GELRemoteServiceReportLoader.Report remoteReport;
+
+    private boolean remoteReportAllowed() {
+        return remoteSessionId == null || (remoteReport != null &&
+                GELRemoteServiceReportLoader.sessionValid(this, remoteSessionId));
+    }
+
+    private String reportSourceText() {
+        return remoteSessionId != null
+                ? (remoteReport == null ? "" : remoteReport.text)
+                : GELServiceLog.getAll();
+    }
+
+    private java.util.List<GELServiceLog.PdfRow> reportSourceRows() {
+        return remoteSessionId != null
+                ? (remoteReport == null
+                        ? java.util.Collections.<GELServiceLog.PdfRow>emptyList()
+                        : remoteReport.rows)
+                : GELServiceLog.getPdfRows();
+    }
+
+    private boolean reportSourceEmpty() {
+        return reportSourceText().trim().isEmpty();
+    }
+
+    private void loadCustomerReport() {
+        if (remoteSessionId == null) return;
+        remoteReport = null;
+        if (btnTxt != null && btnHtml != null) lockExportUI(true);
+        if (txtPreview != null) txtPreview.setText(AppLang.isGreek(this)
+                ? "Λήψη διαγνωστικών αποκλειστικά από τη συσκευή πελάτη..."
+                : "Loading diagnostics only from the customer device...");
+        GELRemoteServiceReportLoader.fetch(this, remoteSessionId, (data, error) -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (data == null ||
+                    !GELRemoteServiceReportLoader.sessionValid(this, remoteSessionId)) {
+                remoteReport = null;
+                if (txtPreview != null) txtPreview.setText(AppLang.isGreek(this)
+                        ? "Η αναφορά πελάτη δεν είναι διαθέσιμη: " + (error == null ? "" : error)
+                        : "Customer report unavailable: " + (error == null ? "" : error));
+                if (exportProgress != null) exportProgress.setVisibility(View.GONE);
+                if (btnTxt != null) btnTxt.setEnabled(false);
+                if (btnHtml != null) btnHtml.setEnabled(false);
+                return;
+            }
+            remoteReport = data;
+            updatePreview();
+            lockExportUI(false);
+        });
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        remoteSessionId = getIntent() != null
+                ? getIntent().getStringExtra(GELRemoteServiceReportLoader.EXTRA_SESSION_ID)
+                : null;
+        if (remoteSessionId != null &&
+                !GELRemoteServiceReportLoader.sessionValid(this, remoteSessionId)) {
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η συνεδρία πελάτη δεν είναι πλέον ενεργή."
+                    : "Customer session is no longer active.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
 
         gelLogo = BitmapFactory.decodeResource(getResources(), R.drawable.gel_logo);
 
@@ -282,10 +346,29 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         root.addView(btnRow);
 
+        if (remoteSessionId != null) {
+            AppCompatButton reloadCustomer = new GelButton(this);
+            reloadCustomer.setText(AppLang.isGreek(this)
+                    ? "ΑΝΑΝΕΩΣΗ ΔΙΑΓΝΩΣΤΙΚΩΝ ΠΕΛΑΤΗ"
+                    : "REFRESH CUSTOMER DIAGNOSTICS");
+            reloadCustomer.setAllCaps(false);
+            reloadCustomer.setOnClickListener(v -> {
+                if (!GELRemoteServiceReportLoader.sessionValid(this, remoteSessionId)) {
+                    Toast.makeText(this, AppLang.isGreek(this)
+                            ? "Η συνεδρία πελάτη έληξε."
+                            : "Customer session expired.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                loadCustomerReport();
+            });
+            root.addView(reloadCustomer);
+        }
+
         scroll.addView(root);
         setContentView(scroll);
 
         UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+        if (remoteSessionId != null) loadCustomerReport();
     }
 
 
@@ -302,6 +385,13 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     private boolean reportServerAuthorised;
 
     private void beginReportExport(boolean html) {
+        if (!remoteReportAllowed()) {
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η αναφορά πελάτη δεν φορτώθηκε ή η συνεδρία έληξε."
+                    : "Customer report not loaded or service session expired.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
         pendingHtmlExport = html;
         showPersonalisedReportPurchaseDialog();
     }
@@ -379,8 +469,12 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     private void continuePreparedExport() {
-        if (GELServiceLog.isEmpty()) showEmptyReportOptionsDialog();
-        else startEntitledExport();
+        if (!remoteReportAllowed() || reportSourceEmpty()) {
+            if (remoteSessionId == null) showEmptyReportOptionsDialog();
+            else Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Δεν υπάρχουν διαθέσιμα διαγνωστικά από τον πελάτη."
+                    : "No customer diagnostics available.", Toast.LENGTH_LONG).show();
+        } else startEntitledExport();
     }
 
     private void finishSingleReport(boolean success) {
@@ -404,6 +498,15 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     private void startEntitledExport() {
+        if (!remoteReportAllowed()) {
+            finishSingleReport(false);
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η συνεδρία πελάτη δεν είναι πλέον ενεργή."
+                    : "Customer service session is no longer active.",
+                    Toast.LENGTH_LONG).show();
+            lockExportUI(false);
+            return;
+        }
         final boolean gelProActive =
                 billingManager != null
                         ? billingManager.isGelProActive()
@@ -1851,19 +1954,23 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     // ==========================================================
     private void exportTxtToPdf() {
 
-        if (GELServiceLog.isEmpty()) {
+        if (!remoteReportAllowed() || reportSourceEmpty()) {
             runOnUiThread(() -> {
-                showEmptyReportOptionsDialog();
+                if (remoteSessionId == null) showEmptyReportOptionsDialog();
+                else Toast.makeText(this, AppLang.isGreek(this)
+                        ? "Δεν υπάρχουν διαθέσιμα διαγνωστικά πελάτη."
+                        : "No customer diagnostic data available.",
+                        Toast.LENGTH_LONG).show();
                 lockExportUI(false);
             });
             return;
         }
 
         try {
-            String text = GELServiceLog.getAll();
+            String text = reportSourceText();
             String[] lines = text.split("\\n+");
             // Same source-grounded value colors as the HTML export.
-            java.util.List<GELServiceLog.PdfRow> pdfRows = GELServiceLog.getPdfRows();
+            java.util.List<GELServiceLog.PdfRow> pdfRows = reportSourceRows();
             int rowIndex = 0;
 
             PdfDocument pdf = new PdfDocument();
@@ -2088,7 +2195,10 @@ ByteArrayOutputStream bos = new ByteArrayOutputStream();
 pdf.writeTo(bos);
 pdf.close();
 
-Uri uri = savePdfToDownloads("GEL_Service_Report.pdf", bos.toByteArray());
+String pdfName = remoteSessionId == null
+        ? "GEL_Service_Report.pdf"
+        : "GEL_Customer_Service_Report_" + remoteSessionId.replaceAll("[^A-Za-z0-9_-]", "") + ".pdf";
+Uri uri = savePdfToDownloads(pdfName, bos.toByteArray());
 consumeSingleReportCreditIfNeeded();
 presentPdf(uri);
 
@@ -2103,8 +2213,8 @@ presentPdf(uri);
     onExportSuccess(successMsg);
 });
 
-// 🔥 καθαρισμός logs ΜΕΤΑ το success
-GELServiceLog.clear();
+// Never erase unrelated technician logs after exporting customer data.
+if (remoteSessionId == null) GELServiceLog.clear();
 
 } catch (Exception e) {
 
@@ -2134,6 +2244,13 @@ GELServiceLog.clear();
     // HTML PDF ENGINE — MULTI PAGE + COLORED
     // ==========================================================
 private void exportHtmlPdf(String report) {
+    if (!remoteReportAllowed()) {
+        Toast.makeText(this, AppLang.isGreek(this)
+                ? "Η συνεδρία πελάτη έληξε." : "Customer session expired.",
+                Toast.LENGTH_LONG).show();
+        lockExportUI(false);
+        return;
+    }
     // The platform PrintManager opens an Android print/save UI. We cannot
     // claim a file was saved until the user confirms "Save as PDF" there.
     final boolean gr = AppLang.isGreek(this);
@@ -2314,7 +2431,7 @@ private String buildHtmlReport(String report) {
     // Preserve the exact per-value coloring captured when each Lab emitted
     // its log. No color is inferred from numeric thresholds or label text.
     // Preview only normalizes repeated blank lines, so skip metadata blanks.
-    java.util.List<GELServiceLog.PdfRow> pdfRows = GELServiceLog.getPdfRows();
+    java.util.List<GELServiceLog.PdfRow> pdfRows = reportSourceRows();
     int pdfRowIndex = 0;
 
     // =========================================================
@@ -2355,11 +2472,15 @@ private String buildHtmlReport(String report) {
     body.append(escapeHtml(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date())));
     body.append("<br><br>");
 
-    body.append("Host / Συσκευή GEL:<br>");
+    body.append(remoteSessionId == null
+            ? "Host / Συσκευή GEL:<br>"
+            : "Technician host / Συσκευή τεχνικού:<br>");
     body.append(escapeHtml(android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL));
     body.append("<br><br>");
 
-    body.append("Host Android / Android GEL:<br>");
+    body.append(remoteSessionId == null
+            ? "Host Android / Android GEL:<br>"
+            : "Technician Android / Android τεχνικού:<br>");
     body.append(escapeHtml(android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")"));
 
     body.append("</div>");
@@ -2623,7 +2744,7 @@ private String buildHtmlReport(String report) {
     private void updatePreview() {
         if (txtPreview == null) return;
 
-        String data = GELServiceLog.getAll();
+        String data = reportSourceText();
 
         if (data == null || data.trim().isEmpty()) {
             txtPreview.setText("No logs available.");
@@ -2690,7 +2811,8 @@ private String buildHtmlReport(String report) {
         String dateLine = "Date / Ημερομηνία: " +
                 java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
 
-        String deviceLine = "Host / Συσκευή GEL: " +
+        String deviceLine = (remoteSessionId == null
+                    ? "Host / Συσκευή GEL: " : "Technician host / Συσκευή τεχνικού: ") +
                 android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
 
         String osLine = "Host Android / Android GEL: " +
@@ -2816,8 +2938,9 @@ private String buildHtmlReport(String report) {
             String dateLine = "Date / Ημερομηνία: " +
                     java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
 
-            String deviceLine = "Host / Συσκευή GEL: " +
-                    android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
+            String deviceLine = (remoteSessionId == null
+                    ? "Host / Συσκευή GEL: " : "Technician host / Συσκευή τεχνικού: ") +
+                android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
 
             String osLine = "Host Android / Android GEL: " +
                     android.os.Build.VERSION.RELEASE +
@@ -2926,6 +3049,13 @@ private String buildHtmlReport(String report) {
     }
 
     private String validateExport() {
+        if (!remoteReportAllowed()) {
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η αναφορά πελάτη δεν εκδίδεται μετά τη λήξη της συνεδρίας."
+                    : "Customer report cannot be exported after service expiry.",
+                    Toast.LENGTH_LONG).show();
+            return null;
+        }
         String report = txtPreview.getText().toString();
 
         if (report == null

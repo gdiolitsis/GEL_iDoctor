@@ -59,7 +59,19 @@ public final class GELRemoteDiagnosticsSync {
     private static final Handler MAIN =
             new Handler(Looper.getMainLooper());
 
-    private static final ArrayDeque<String> pendingLines =
+    private static final class DiagnosticLine {
+        final String text;
+        final String valueColor;
+        final int valueStart;
+
+        DiagnosticLine(String text, String valueColor, int valueStart) {
+            this.text = text;
+            this.valueColor = valueColor;
+            this.valueStart = valueStart;
+        }
+    }
+
+    private static final ArrayDeque<DiagnosticLine> pendingLines =
             new ArrayDeque<>();
 
     private static Context appContext;
@@ -229,10 +241,7 @@ public final class GELRemoteDiagnosticsSync {
                 );
 
         boolean connected =
-                prefs.getBoolean(
-                        KEY_CONNECTED,
-                        false
-                );
+                GELCustomerServiceAccess.isActive(appContext);
 
         String sessionId =
                 prefs.getString(
@@ -243,9 +252,11 @@ public final class GELRemoteDiagnosticsSync {
         if (!connected ||
                 sessionId == null ||
                 sessionId.trim().isEmpty()) {
-
-            // Do not clear queued lines belonging to an in-flight request.
-            // Simply stop capturing until there is a valid customer session.
+            // Once the lease ends, no stale logs may be transmitted
+            // after a later session is established.
+            activeSessionId = null;
+            pendingLines.clear();
+            lastCapturedLogText = "";
             return false;
         }
 
@@ -332,48 +343,51 @@ public final class GELRemoteDiagnosticsSync {
         }
 
         String[] lines =
-                delta.split(
-                        "\\r?\\n"
-                );
+                delta.split("\\r?\\n");
 
+        // Source colors are captured only when the exact original PDF row
+        // matches the transmitted log line. Never guess a color by text.
+        List<GELServiceLog.PdfRow> sourceRows = GELServiceLog.getPdfRows();
+        ArrayList<DiagnosticLine> captured = new ArrayList<>();
         for (String raw : lines) {
-
-            if (raw == null) {
-                continue;
+            if (raw == null || raw.trim().isEmpty()) continue;
+            String line = raw.trim();
+            if (line.length() > MAX_LINE_CHARS) {
+                line = line.substring(0, MAX_LINE_CHARS);
             }
-
-            String line =
-                    raw.trim();
-
-            if (line.isEmpty()) {
-                continue;
-            }
-
-            if (line.length() >
-                    MAX_LINE_CHARS) {
-
-                line =
-                        line.substring(
-                                0,
-                                MAX_LINE_CHARS
-                        );
-            }
-
-            pendingLines.addLast(
-                    line
-            );
+            captured.add(new DiagnosticLine(line, null, -1));
         }
+        int row = sourceRows.size() - 1;
+        for (int k = captured.size() - 1; k >= 0; k--) {
+            while (row >= 0 && sourceRows.get(row).text.trim().isEmpty()) row--;
+            if (row < 0) break;
+            DiagnosticLine item = captured.get(k);
+            GELServiceLog.PdfRow evidence = sourceRows.get(row);
+            // A truncated or mismatched line must be neutral.
+            if (item.text.equals(evidence.text.trim())) {
+                captured.set(k, new DiagnosticLine(item.text,
+                        evidence.valueColor, evidence.valueStart));
+                row--;
+            } else {
+                // An unmatched tail is not enough evidence to color any
+                // earlier line in this capture.
+                break;
+            }
+        }
+        pendingLines.addAll(captured);
     }
 
     private static void sendNextBatchIfPossible() {
 
         final String sendSessionId;
         final List<String> batch;
+        final List<Map<String, Object>> styles;
 
         synchronized (LOCK) {
 
             if (inFlight ||
                     activeSessionId == null ||
+                    !GELCustomerServiceAccess.isActive(appContext) ||
                     pendingLines.isEmpty() ||
                     firebaseAuth == null ||
                     firebaseFunctions == null) {
@@ -390,35 +404,22 @@ public final class GELRemoteDiagnosticsSync {
                 return;
             }
 
-            batch =
-                    new ArrayList<>();
-
+            batch = new ArrayList<>();
+            styles = new ArrayList<>();
             int chars = 0;
 
-            for (String line : pendingLines) {
-
-                if (line == null ||
-                        line.isEmpty()) {
-                    continue;
-                }
-
-                if (batch.size() >=
-                        MAX_LINES_PER_BATCH) {
-                    break;
-                }
-
-                if (!batch.isEmpty() &&
-                        chars + line.length() >
-                                MAX_BATCH_CHARS) {
-                    break;
-                }
-
-                batch.add(
-                        line
-                );
-
-                chars +=
-                        line.length();
+            for (DiagnosticLine entry : pendingLines) {
+                String line = entry.text;
+                if (line == null || line.isEmpty()) continue;
+                if (batch.size() >= MAX_LINES_PER_BATCH) break;
+                if (!batch.isEmpty() && chars + line.length() > MAX_BATCH_CHARS) break;
+                batch.add(line);
+                Map<String, Object> style = new HashMap<>();
+                style.put("valueColor", entry.valueColor != null
+                        ? entry.valueColor : "");
+                style.put("valueStart", entry.valueStart);
+                styles.add(style);
+                chars += line.length();
             }
 
             if (batch.isEmpty()) {
@@ -443,6 +444,7 @@ public final class GELRemoteDiagnosticsSync {
                 "lines",
                 batch
         );
+        data.put("styles", styles);
 
         data.put(
                 "sequence",

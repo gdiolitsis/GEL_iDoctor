@@ -146,7 +146,8 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
         // CUSTOMER REMOTE SESSION TRANSPORT
         // Safe no-op on technician/local installations.
         // ============================================================
-        GELRemoteCommandService.ensureRunning(this);
+        // Read-only customer Service Mode deliberately does NOT launch
+        // the disabled remote-control foreground service.
 
         // ============================================================
         // GEL-ONLY REMOTE ASSIST ACTIVITY REGISTRY
