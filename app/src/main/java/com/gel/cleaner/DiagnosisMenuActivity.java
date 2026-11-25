@@ -153,14 +153,15 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
                             ? "Σύνδεση με Τεχνικό"
                             : "Connect to Technician",
                     gr
-                            ? "Απαιτείται ενεργή συνδρομή GEL PRO · διαγνωστική σύνδεση με τεχνικό • έως 8 ώρες"
-                            : "Active paid GEL PRO subscription required · connect with technician • up to 8 hours"
+                            ? "Δωρεάν αποδοχή πρόσκλησης τεχνικού με QR / Service Code · έως 8 ώρες"
+                            : "Join technician's invitation for free using QR / Service Code · up to 8 hours"
             );
 
-            connectTechnicianBtn.setOnClickListener(v -> {
-                if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) return;
-                startActivity(new Intent(this, ConnectToTechnicianActivity.class));
-            });
+            // The customer can JOIN, never create, a technician-owned session.
+            // The paid-only gate remains on the technician CREATE path.
+            connectTechnicianBtn.setOnClickListener(v ->
+                    startActivity(new Intent(this, ConnectToTechnicianActivity.class))
+            );
 
                 root.addView(connectTechnicianBtn);
             }
