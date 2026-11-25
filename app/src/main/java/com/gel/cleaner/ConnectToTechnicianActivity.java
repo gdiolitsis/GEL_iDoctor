@@ -152,10 +152,8 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
         buildScreen();
 
-        if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) {
-            // Including Smart QR/deep-link launches. No automatic claim is made.
-            return;
-        }
+        // No customer subscription is needed to ACCEPT a technician-issued
+        // invitation. The Firebase backend checks the paying technician.
         restoreStoredCustomerSession();
 
         UIHelpers.applyPressEffectRecursive(
@@ -182,13 +180,8 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
         super.onResume();
         serviceClock.removeCallbacks(serviceTick);
         serviceClock.post(serviceTick);
-        // Paid subscription is required for the entire connected session.
-        if (isStoredCustomerSessionConnected() &&
-                !GelProEntitlement.isPaidProActive(this)) {
-            requestExpiredServerTransition();
-            handleCustomerSessionEnded("SUBSCRIPTION_REQUIRED");
-            GELServiceSubscriptionGate.showRequired(this);
-        }
+        // Customer's free temporary diagnostic lease is checked by
+        // serviceTick; never require a customer subscription on resume.
     }
 
     @Override
@@ -1014,8 +1007,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
             String serviceCode,
             long qrExpiresAt
     ) {
-        if (!GELServiceSubscriptionGate.requirePaidSubscription(this) ||
-                pairingInProgress || consentDialogOpen) return;
+        if (pairingInProgress || consentDialogOpen) return;
 
         // Explicit consent for sharing diagnostic logs; QR links never silently
         // start data transfer or enable remote screen/command control.
@@ -1044,7 +1036,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
             String serviceCode,
             long qrExpiresAt
     ) {
-        if (pairingInProgress || !GELServiceSubscriptionGate.requirePaidSubscription(this)) {
+        if (pairingInProgress) {
             return;
         }
 
@@ -1196,11 +1188,9 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                             if (!task.isSuccessful() ||
                                     task.getResult() == null) {
 
-                                if (task.getException() instanceof com.google.firebase.functions.FirebaseFunctionsException
-                                        && ((com.google.firebase.functions.FirebaseFunctionsException) task.getException())
-                                            .getCode() == com.google.firebase.functions.FirebaseFunctionsException.Code.PERMISSION_DENIED) {
-                                    GELServiceSubscriptionGate.showRequired(this);
-                                }
+                                // Firebase may deny a revoked/expired TECHNICIAN subscription
+                                // or an invalid pairing code. Show the real error, not a
+                                // misleading customer subscription popup.
 
                                 String message =
                                         task.getException() != null

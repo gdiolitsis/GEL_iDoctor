@@ -37,8 +37,9 @@ const PAIRING_WINDOW_MS = 2 * 60 * 60 * 1000;
 const {SERVICE_MAX_MS, REMOTE_CONTROL_ENABLED, serviceActive,
   serviceUntilMs, paidUntil, paidServiceDeadline} = require('./service-session-policy');
 
-// Service pairing requires an active Play subscription on BOTH devices.
-// Tester, gift, and trial grants do not qualify.
+// Only the technician who CREATES a Service Session must have active paid
+// Play GEL PRO. The customer JOINS the technician's invitation for free;
+// tester/gift/trial access does not authorize creating sessions.
 async function paidSubscriptionUntil(uid) {
   const doc = await db.collection('pro_paid_accounts').doc(uid).get();
   return paidUntil(doc.data());
@@ -282,13 +283,11 @@ exports.createServiceSession =
 exports.claimServiceSession =
   onCall(
     async (request) => {
+      // Joining a technician-issued QR/service code is free to the customer.
+      // Firebase identity, technician subscription, code and deadlines remain
+      // server-verified. Only createServiceSession requires paid GEL PRO.
       const customerUid =
         requireAuth(request);
-      const customerPaidUntil = await paidSubscriptionUntil(customerUid);
-      if (!customerPaidUntil) {
-        throw new HttpsError('permission-denied',
-          'An active paid GEL PRO subscription is required on the customer device.');
-      }
 
       const data =
         request.data || {};
@@ -456,10 +455,10 @@ exports.claimServiceSession =
             }
 
             const connectedAtMs = Date.now();
-            // The eight-hour window is an upper bound. An expiring
-            // Play subscription shortens this session; it cannot extend it.
+            // Service is limited to eight hours, or earlier if the
+            // technician's paid GEL PRO expires. Customer is never billed.
             const serviceEndsAtMs = paidServiceDeadline(
-              connectedAtMs, techPaidUntil, customerPaidUntil
+              connectedAtMs, techPaidUntil
             );
             if (serviceEndsAtMs <= connectedAtMs) {
               throw new HttpsError('permission-denied', 'GEL PRO subscription expired.');

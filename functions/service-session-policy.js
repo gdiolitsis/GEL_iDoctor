@@ -32,11 +32,12 @@ function paidUntil(account, now = Date.now()) {
   return Number.isFinite(until) && until > now ? until : 0;
 }
 
-function paidServiceDeadline(connectedAtMs, technicianUntil, customerUntil) {
+// Customer access is a free, session-scoped grant. Only the technician
+// must have a paid GEL PRO entitlement to initiate and maintain service.
+function paidServiceDeadline(connectedAtMs, technicianUntil) {
   if (!Number.isFinite(connectedAtMs) || connectedAtMs <= 0) return 0;
-  if (!Number.isFinite(technicianUntil) || technicianUntil <= connectedAtMs ||
-      !Number.isFinite(customerUntil) || customerUntil <= connectedAtMs) return 0;
-  return Math.min(connectedAtMs + SERVICE_MAX_MS, technicianUntil, customerUntil);
+  if (!Number.isFinite(technicianUntil) || technicianUntil <= connectedAtMs) return 0;
+  return Math.min(connectedAtMs + SERVICE_MAX_MS, technicianUntil);
 }
 
 module.exports = {

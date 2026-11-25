@@ -36,13 +36,15 @@ test('only server-verified paid subscriptions qualify; tester, trial and gift do
   assert.equal(paidUntil({verifiedUntil:'invalid'}, now), 0);
 });
 
-test('service ends at eight-hour ceiling or earlier paid subscription expiry', () => {
+test('free customer service ends after eight hours or technician paid expiry', () => {
   const now = Date.UTC(2026, 10, 25, 12, 0);
-  const full = now + SERVICE_MAX_MS + 12345;
-  assert.equal(paidServiceDeadline(now, full, full), now + SERVICE_MAX_MS);
-  assert.equal(paidServiceDeadline(now, now+3600000, full), now+3600000);
-  assert.equal(paidServiceDeadline(now, full, now+1800000), now+1800000);
-  assert.equal(paidServiceDeadline(now, now, full), 0);
-  assert.equal(paidServiceDeadline(now, full, now), 0);
-  assert.equal(paidServiceDeadline(now, NaN, full), 0);
+  const techFull = now + SERVICE_MAX_MS + 12345;
+  assert.equal(paidServiceDeadline(now, techFull), now + SERVICE_MAX_MS);
+  assert.equal(paidServiceDeadline(now, now + 3600000), now + 3600000);
+  assert.equal(paidServiceDeadline(now, now), 0);
+  assert.equal(paidServiceDeadline(now, NaN), 0);
+  assert.equal(paidServiceDeadline(now, undefined), 0);
+  // No customer subscription argument is accepted or needed.
+  assert.equal(paidServiceDeadline(now, techFull, 0), now + SERVICE_MAX_MS);
+  assert.equal(paidServiceDeadline(now, techFull, undefined), now + SERVICE_MAX_MS);
 });

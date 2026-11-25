@@ -19,12 +19,13 @@ public final class GELPaidServiceConnectionContractTest {
         return new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
     }
 
-    @Test public void bothTechnicianAndCustomerButtonsRequirePaidSubscription() throws Exception {
+    @Test public void onlyTechnicianCreateButtonRequiresPaidSubscription() throws Exception {
         String menu = source("DiagnosisMenuActivity.java");
         assertTrue(menu.contains("final boolean showRemoteAssistUi = true;"));
         assertTrue(menu.contains("Σύνδεση με Πελάτη — Διαγνωστικά"));
         assertTrue(menu.contains("Σύνδεση με Τεχνικό"));
-        assertEquals(2, menu.split("GELServiceSubscriptionGate.requirePaidSubscription\\(this\\)", -1).length - 1);
+        assertTrue(menu.contains("Δωρεάν αποδοχή πρόσκλησης τεχνικού"));
+        assertEquals(1, menu.split("GELServiceSubscriptionGate.requirePaidSubscription\\(this\\)", -1).length - 1);
     }
 
     @Test public void testerAndGiftCannotBypassConnectionGate() throws Exception {
@@ -36,10 +37,12 @@ public final class GELPaidServiceConnectionContractTest {
         assertFalse(gate.contains("GelProEntitlement.isActive(activity)"));
     }
 
-    @Test public void deeplinksAndTechnicianSessionCreationRequirePaid() throws Exception {
+    @Test public void freeCustomerMayAcceptButOnlyPaidTechnicianCanCreate() throws Exception {
         String customer = source("ConnectToTechnicianActivity.java");
         String technician = source("RepairDeviceActivity.java");
-        assertTrue(customer.contains("GELServiceSubscriptionGate.requirePaidSubscription(this)"));
+        assertFalse(customer.contains("GELServiceSubscriptionGate.requirePaidSubscription(this)"));
+        assertFalse(customer.contains("GELServiceSubscriptionGate.showRequired(this)"));
+        assertTrue(customer.contains("beginClaimServiceSession(sessionId, serviceCode, qrExpiresAt)"));
         assertTrue(technician.contains("GELServiceSubscriptionGate.requirePaidSubscription(this)"));
         assertTrue(technician.contains("GelProEntitlement.isPaidProActive(this)"));
         assertTrue(customer.contains("GELCustomerServiceAccess.grant("));
