@@ -277,6 +277,10 @@
             android:name=".RepairDeviceActivity"
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold"/>
+        <activity
+            android:name=".GELReadOnlyDiagnosticsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.GEL.DarkGold"/>
 
         <!-- ================= CUSTOMER DEVICE / CONNECT TO TECHNICIAN ================= -->
         <activity
