@@ -229,10 +229,7 @@ public final class GELRemoteDiagnosticsSync {
                 );
 
         boolean connected =
-                prefs.getBoolean(
-                        KEY_CONNECTED,
-                        false
-                );
+                GELCustomerServiceAccess.isActive(appContext);
 
         String sessionId =
                 prefs.getString(
