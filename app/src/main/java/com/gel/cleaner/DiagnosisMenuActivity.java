@@ -114,11 +114,10 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
             // TECHNICIAN SERVICE — REMOTE DEVICE DIAGNOSTICS & SUPPORT
             // Android customer-device remote service session
             //
-            // Initial Play Store release:
-            // keep Remote Assist code/backend intact, but hide its UI.
-            // Set to true later to restore both Remote Assist entry points.
+            // Technician/customer pairing and read-only diagnostics are restored.
+            // Screen sharing and remote commands remain disabled.
             // ========================================================
-            final boolean showRemoteAssistUi = false;
+            final boolean showRemoteAssistUi = true;
 
             if (showRemoteAssistUi) {
                 final boolean gr = AppLang.isGreek(this);
@@ -131,11 +130,11 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
 
             View repairBtn = makeBlockButton(
                     gr
-                            ? "Απομακρυσμένη Διάγνωση & Υποστήριξη Συσκευής"
-                            : "Remote Device Diagnostics & Support",
+                            ? "Σύνδεση με Πελάτη — Διαγνωστικά"
+                            : "Connect to Customer — Diagnostics",
                     gr
-                            ? "Σύνδεση συσκευής πελάτη • QR / Service Code • Live Diagnostics"
-                            : "Connect customer device • QR / Service Code • Live Diagnostics"
+                            ? "Σύνδεση QR / Service Code • Αποτελέσματα μόνο για ανάγνωση • 8 ώρες"
+                            : "Pair via QR / Service Code • Read-only results • 8 hours"
             );
 
             repairBtn.setOnClickListener(v ->
@@ -156,8 +155,8 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
                             ? "Σύνδεση με Τεχνικό"
                             : "Connect to Technician",
                     gr
-                            ? "Σύνδεση αυτής της συσκευής σε ενεργό Service Session τεχνικού • QR / Service Code"
-                            : "Connect this device to an active technician Service Session • QR / Service Code"
+                            ? "Προσωρινή δωρεάν πρόσβαση εργαστηρίων μέσω τεχνικού • έως 8 ώρες"
+                            : "Temporary free diagnostic access via technician • up to 8 hours"
             );
 
             connectTechnicianBtn.setOnClickListener(v ->
