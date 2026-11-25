@@ -1,0 +1,17 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.gel.iDoctor",
+      "sha256_cert_fingerprints": [
+        "73:B2:C3:61:44:A1:C8:14:C9:2F:EA:0E:E7:1A:6B:E4:08:C2:F1:11:DB:20:BD:DE:A2:4F:95:AD:95:8B:09:64",
+        "BF:A6:55:49:E7:BE:1C:40:78:53:40:7B:16:F8:8E:AA:29:2F:3D:1C:CC:98:FF:71:43:A2:41:4B:6D:1F:C5:27",
+        "8E:DA:15:18:3C:59:96:CA:2E:D2:8D:19:D7:DA:F2:F1:62:C8:55:19:10:79:D0:45:F3:86:A4:89:50:29:BC:5A",
+        "1D:D1:D8:E3:E5:E5:79:61:74:70:02:34:F0:96:6D:08:1F:8F:87:4A:63:91:3C:04:5C:CE:3F:91:8C:73:F2:EC"
+      ]
+    }
+  }
+]
