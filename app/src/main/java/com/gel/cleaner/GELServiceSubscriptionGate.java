@@ -55,9 +55,10 @@ public final class GELServiceSubscriptionGate {
                           + "ή εγκεκριμένη δωρεάν FULL ACCESS μέσω Google. Ο πελάτης συνδέεται δωρεάν. "
                           + "Οι κωδικοί Tester και η δοκιμαστική πρόσβαση δεν αρκούν. "
                           + "Μπορείτε να ελέγξετε το FULL ACCESS ή να επαναφέρετε τη συνδρομή σας."
-                        : "Creating a customer Service Session requires a paid GEL PRO subscription for the technician. The customer joins for free with QR or code. "
-                          + "Tester, Gift and Trial access cannot create technician sessions. "
-                          + "You can subscribe or restore your existing Play purchase.")
+                        : "To create a technician session, you need an active GEL PRO subscription "
+                          + "or approved Google FULL ACCESS. The customer joins for free with a QR code or service code. "
+                          + "Tester codes and trial access do not qualify. "
+                          + "You can check your FULL ACCESS or restore your subscription.")
                 .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
                 .setPositiveButton(gr ? "Έλεγχος FULL ACCESS / PRO" : "Check FULL ACCESS / PRO",
                         (d, w) -> activity.startActivity(
