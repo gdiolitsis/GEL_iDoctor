@@ -94,7 +94,9 @@ public final class GelProEntitlement {
         return isPaidProActive(context)
                 || isTesterProActive(context)
                 || GelAccountPro.active(context)
-                || GelTrialAccess.active(context);
+                || GelTrialAccess.active(context)
+                // Server-issued, eight-hour customer diagnostic session.
+                || GELCustomerServiceAccess.isActive(context);
     }
 
     public static boolean isPaidProActive(
