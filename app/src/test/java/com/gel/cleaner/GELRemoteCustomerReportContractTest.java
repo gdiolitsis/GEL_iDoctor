@@ -65,6 +65,14 @@ public final class GELRemoteCustomerReportContractTest {
         assertFalse(viewer.contains("GELRemoteAssistActivity.class"));
     }
 
+    @Test public void customerMustConsentBeforeDiagnosticSharing() throws Exception {
+        String pairing = source("ConnectToTechnicianActivity.java");
+        assertTrue(pairing.contains("ΣΥΝΔΕΣΗ & ΚΟΙΝΟΠΟΙΗΣΗ"));
+        assertTrue(pairing.contains("beginClaimServiceSession(sessionId, serviceCode, qrExpiresAt)"));
+        assertTrue(pairing.contains("δεν επιτρέπεται απομακρυσμένος χειρισμός") ||
+                pairing.contains("Δεν επιτρέπεται απομακρυσμένος χειρισμός"));
+    }
+
     @Test public void sessionExpiryIsStillHardGateForReportExports() throws Exception {
         String loader = source("GELRemoteServiceReportLoader.java");
         String export = source("ServiceReportActivity.java");
