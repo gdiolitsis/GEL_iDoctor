@@ -34,6 +34,35 @@ setGlobalOptions({
 
 const COLLECTION = "service_sessions";
 const PAIRING_WINDOW_MS = 2 * 60 * 60 * 1000;
+const {SERVICE_MAX_MS, REMOTE_CONTROL_ENABLED, serviceActive,
+  serviceUntilMs} = require('./service-session-policy');
+const {verifiedGoogleEmail, giftKey} = require('./pro-policy');
+const {trialUntil} = require('./trial-policy');
+
+// A technician needs a server-verified paid/tester/gift/trial entitlement;
+// checking local app UI alone would let any authenticated account issue sessions.
+async function technicianServiceEntitled(request) {
+  const uid = requireAuth(request);
+  const now = Date.now();
+  const email = verifiedGoogleEmail(request.auth);
+  const [paid, tester, gift, trialExpiry] = await Promise.all([
+    db.collection('pro_paid_accounts').doc(uid).get(),
+    db.collection('tester_entitlements').doc(uid).get(),
+    email ? db.collection('pro_gift_accounts').doc(giftKey(email)).get() : null,
+    email && request.data && request.data.deviceId
+      ? trialUntil(db, email, request.data.deviceId, now) : 0,
+  ]);
+  const p = paid.data() || {};
+  const t = tester.data() || {};
+  const g = gift ? (gift.data() || {}) : {};
+  const giftExpiry = g.expiresAt?.toMillis?.() || 0;
+  return Number(p.verifiedUntil) > now ||
+    (t.enabled === true && (t.permanent === true ||
+      (t.expiresAt?.toMillis?.() || 0) > now)) ||
+    (g.enabled === true && (!giftExpiry || giftExpiry > now)) ||
+    trialExpiry > now;
+}
+
 
 // Remote diagnostics transport limits.
 // One callable request may carry up to 25 log lines.
@@ -204,6 +233,11 @@ exports.createServiceSession =
       const technicianUid =
         requireAuth(request);
 
+      if (!(await technicianServiceEntitled(request))) {
+        throw new HttpsError('permission-denied',
+          'An active server-verified GEL PRO entitlement is required for technician service.');
+      }
+
       const createdAtMs =
         Date.now();
 
@@ -229,6 +263,7 @@ exports.createServiceSession =
         technicianUid,
         customerUid: null,
         status: "WAITING",
+        serviceEndsAt: null,
 
         createdAt:
           Timestamp.fromMillis(
@@ -378,6 +413,9 @@ exports.claimServiceSession =
                 session.customerUid ===
                   customerUid
               ) {
+                if (!serviceActive(session)) {
+                  throw new HttpsError('deadline-exceeded', 'The eight-hour service window has expired.');
+                }
                 return {
                   sessionId:
                     snap.id,
@@ -389,6 +427,8 @@ exports.claimServiceSession =
 
                   technicianUid:
                     session.technicianUid,
+                  serviceEndsAt: serviceUntilMs(session),
+                  serverNowMs: Date.now(),
 
                   status:
                     "CONNECTED",
@@ -420,6 +460,8 @@ exports.claimServiceSession =
               );
             }
 
+            const connectedAtMs = Date.now();
+            const serviceEndsAtMs = connectedAtMs + SERVICE_MAX_MS;
             tx.update(
               ref,
               {
@@ -428,7 +470,9 @@ exports.claimServiceSession =
                   "CONNECTED",
 
                 connectedAt:
-                  FieldValue.serverTimestamp(),
+                  Timestamp.fromMillis(connectedAtMs),
+                serviceEndsAt:
+                  Timestamp.fromMillis(serviceEndsAtMs),
 
                 updatedAt:
                   FieldValue.serverTimestamp(),
@@ -446,6 +490,8 @@ exports.claimServiceSession =
 
               technicianUid:
                 session.technicianUid,
+              serviceEndsAt: serviceEndsAtMs,
+              serverNowMs: connectedAtMs,
 
               status:
                 "CONNECTED",
@@ -796,6 +842,35 @@ exports.customerCancelServiceSession =
   );
 
 
+// ============================================
+// CLIENT — EXPIRE EIGHT-HOUR SERVICE SESSION
+// Either connected participant can materialize the expiry transition.
+// PRO and diagnostic-access checks do not rely on this transition:
+// all authorization still verifies the immutable serviceEndsAt.
+// ============================================
+exports.expireServiceSession = onCall(async request => {
+  const uid = requireAuth(request);
+  const sessionId = normalizeSessionId(request.data?.sessionId);
+  if (!sessionId) throw new HttpsError('invalid-argument', 'Invalid session ID.');
+  const ref = db.collection(COLLECTION).doc(sessionId);
+  return db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError('not-found', 'Service Session not found.');
+    const session = snap.data();
+    if (session.technicianUid !== uid && session.customerUid !== uid) {
+      throw new HttpsError('permission-denied', 'Not a participant in the session.');
+    }
+    if (session.status !== 'CONNECTED') return {status: session.status};
+    if (serviceActive(session)) return {status: 'CONNECTED'};
+    tx.update(ref, {
+      status: 'EXPIRED',
+      endedAt: Timestamp.fromMillis(Date.now()),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return {status: 'EXPIRED'};
+  });
+});
+
 // ============================================================
 // CUSTOMER — REMOTE DIAGNOSTICS LOG BATCH
 //
@@ -811,8 +886,8 @@ exports.customerCancelServiceSession =
 // IMPORTANT:
 // - Only the customerUid already bound to the CONNECTED session
 //   may upload logs.
-// - The active pairing-code expiry does not terminate a CONNECTED
-//   Service Session.
+// - The 2-hour pairing expiry is independent from the hard 8-hour
+//   service deadline. Once it ends, further uploads are rejected.
 // - Logs are transport data only; they do not execute commands.
 // ============================================================
 exports.appendDiagnosticBatch =
@@ -970,13 +1045,10 @@ exports.appendDiagnosticBatch =
       const session =
         sessionSnap.data();
 
-      if (
-        session.status !==
-        "CONNECTED"
-      ) {
+      if (!serviceActive(session)) {
         throw new HttpsError(
-          "failed-precondition",
-          "Diagnostic upload requires a CONNECTED Service Session."
+          "deadline-exceeded",
+          "Diagnostic upload requires an unexpired eight-hour Service Session."
         );
       }
 
@@ -1045,6 +1117,11 @@ exports.appendDiagnosticBatch =
 exports.sendRemoteCommand =
   onCall(
     async (request) => {
+      if (!REMOTE_CONTROL_ENABLED) {
+        throw new HttpsError('failed-precondition',
+          'Remote commands and screen control are disabled in read-only Service Mode.');
+      }
+
       const technicianUid =
         requireAuth(request);
 
@@ -1220,6 +1297,11 @@ exports.sendRemoteCommand =
 exports.claimRemoteCommand =
   onCall(
     async (request) => {
+      if (!REMOTE_CONTROL_ENABLED) {
+        throw new HttpsError('failed-precondition',
+          'Remote commands and screen control are disabled in read-only Service Mode.');
+      }
+
       const customerUid =
         requireAuth(request);
 
@@ -1411,6 +1493,11 @@ exports.claimRemoteCommand =
 exports.completeRemoteCommand =
   onCall(
     async (request) => {
+      if (!REMOTE_CONTROL_ENABLED) {
+        throw new HttpsError('failed-precondition',
+          'Remote commands and screen control are disabled in read-only Service Mode.');
+      }
+
       const customerUid =
         requireAuth(request);
 
@@ -1715,6 +1802,11 @@ function remoteAssistCandidateKey(value) {
 exports.startRemoteAssist =
   onCall(
     async (request) => {
+      if (!REMOTE_CONTROL_ENABLED) {
+        throw new HttpsError('failed-precondition',
+          'Remote commands and screen control are disabled in read-only Service Mode.');
+      }
+
       const technicianUid =
         requireAuth(request);
 
@@ -1847,6 +1939,11 @@ exports.startRemoteAssist =
 exports.answerRemoteAssist =
   onCall(
     async (request) => {
+      if (!REMOTE_CONTROL_ENABLED) {
+        throw new HttpsError('failed-precondition',
+          'Remote commands and screen control are disabled in read-only Service Mode.');
+      }
+
       const customerUid =
         requireAuth(request);
 
@@ -1999,6 +2096,11 @@ exports.answerRemoteAssist =
 exports.addRemoteAssistIceCandidate =
   onCall(
     async (request) => {
+      if (!REMOTE_CONTROL_ENABLED) {
+        throw new HttpsError('failed-precondition',
+          'Remote commands and screen control are disabled in read-only Service Mode.');
+      }
+
       const uid =
         requireAuth(request);
 
@@ -2226,6 +2328,11 @@ exports.addRemoteAssistIceCandidate =
 exports.stopRemoteAssist =
   onCall(
     async (request) => {
+      if (!REMOTE_CONTROL_ENABLED) {
+        throw new HttpsError('failed-precondition',
+          'Remote commands and screen control are disabled in read-only Service Mode.');
+      }
+
       const uid =
         requireAuth(request);
 
