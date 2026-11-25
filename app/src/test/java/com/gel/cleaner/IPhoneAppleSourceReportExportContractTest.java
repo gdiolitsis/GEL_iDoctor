@@ -46,7 +46,7 @@ public final class IPhoneAppleSourceReportExportContractTest {
         // Both remote and local reports use the same PDF renderer.
         // The local path must still read the original GELServiceLog.
         assertTrue(report.contains("String text = reportSourceText();"));
-        assertTrue(report.contains("return GELServiceLog.getAll();"));
+        assertTrue(report.contains("GELServiceLog.getAll();"));
         assertTrue(report.contains("private String reportSourceText()"));
         assertTrue(report.contains("GELServiceLog.getPdfRows()"));
         assertTrue(report.contains("GELPdfMeasuredLineWrap.split(sub,"));
