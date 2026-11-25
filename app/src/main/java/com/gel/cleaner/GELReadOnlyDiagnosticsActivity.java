@@ -1,6 +1,7 @@
 package com.gel.cleaner;
 
 import android.content.SharedPreferences;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -96,6 +97,26 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
                 : "When the customer runs labs, their logs will appear here.");
         scroll.addView(logText);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+
+        com.gel.cleaner.GelButton report = new com.gel.cleaner.GelButton(this);
+        report.setAllCaps(false);
+        report.setText(gr ? "ΕΞΑΓΩΓΗ SERVICE REPORT ΠΕΛΑΤΗ"
+                : "EXPORT CUSTOMER SERVICE REPORT");
+        report.setTextColor(0xFF39FF14);
+        report.setTextSize(16f);
+        report.setOnClickListener(v -> {
+            if (!isLive() || !GelProEntitlement.isPaidProActive(this)) {
+                Toast.makeText(this, gr
+                        ? "Απαιτείται ενεργή συνεδρία και συνδρομή GEL PRO."
+                        : "An active session and paid GEL PRO subscription are required.",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+            Intent intent = new Intent(this, ServiceReportActivity.class);
+            intent.putExtra(GELRemoteServiceReportLoader.EXTRA_SESSION_ID, sessionId);
+            startActivity(intent);
+        });
+        root.addView(report);
 
         com.gel.cleaner.GelButton exit = new com.gel.cleaner.GelButton(this);
         exit.setAllCaps(false);
