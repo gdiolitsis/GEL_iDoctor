@@ -8,7 +8,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 
-/** Guard both Service Session roles with an actual paid Play PRO subscription. */
+/** Guard only technician-owned Service Session creation with paid Play PRO. */
 public final class GELServiceSubscriptionGate {
     private GELServiceSubscriptionGate() {}
 
@@ -26,11 +26,11 @@ public final class GELServiceSubscriptionGate {
                 androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
                 .setTitle(gr ? "ΑΠΑΙΤΕΙΤΑΙ ΣΥΝΔΡΟΜΗ GEL PRO" : "GEL PRO SUBSCRIPTION REQUIRED")
                 .setMessage(gr
-                        ? "Η σύνδεση τεχνικού–πελάτη είναι διαθέσιμη μόνο με ενεργή συνδρομή GEL PRO. "
+                        ? "Η δημιουργία σύνδεσης με πελάτη απαιτεί ενεργή συνδρομή GEL PRO από τον τεχνικό. Ο πελάτης συνδέεται δωρεάν με QR ή κωδικό. "
                           + "Η πρόσβαση Tester, Gift ή η δοκιμαστική πρόσβαση δεν αρκούν για αυτή τη λειτουργία. "
                           + "Μπορείτε να ενεργοποιήσετε ή να επαναφέρετε τη συνδρομή σας."
-                        : "Technician–customer connection requires an active paid GEL PRO subscription. "
-                          + "Tester, Gift and Trial access do not enable this service. "
+                        : "Creating a customer Service Session requires a paid GEL PRO subscription for the technician. The customer joins for free with QR or code. "
+                          + "Tester, Gift and Trial access cannot create technician sessions. "
                           + "You can subscribe or restore your existing Play purchase.")
                 .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
                 .setPositiveButton(gr ? "Συνδρομή GEL PRO" : "GEL PRO subscription",
