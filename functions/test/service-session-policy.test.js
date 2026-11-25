@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {SERVICE_MAX_MS, REMOTE_CONTROL_ENABLED, serviceActive,
-  clampServiceEnd, serviceUntilMs, paidUntil, paidServiceDeadline} = require('../service-session-policy');
+  clampServiceEnd, serviceUntilMs, paidUntil, giftServiceUntil, paidServiceDeadline} = require('../service-session-policy');
 
 test('read-only technician service is exactly eight hours', () => {
   const now = Date.UTC(2026, 10, 25, 9, 0, 0);
@@ -47,4 +47,15 @@ test('free customer service ends after eight hours or technician paid expiry', (
   // No customer subscription argument is accepted or needed.
   assert.equal(paidServiceDeadline(now, techFull, 0), now + SERVICE_MAX_MS);
   assert.equal(paidServiceDeadline(now, techFull, undefined), now + SERVICE_MAX_MS);
+});
+
+test('permanent verified Google Gift is eligible, revoked/expired gifts are not', () => {
+  const now = Date.UTC(2026, 10, 25, 12, 0);
+  assert.equal(giftServiceUntil(null, now), 0);
+  assert.equal(giftServiceUntil({enabled:false}, now), 0);
+  assert.equal(giftServiceUntil({enabled:true}, now), Number.MAX_SAFE_INTEGER);
+  assert.equal(giftServiceUntil({enabled:true, expiresAt:{toMillis:()=>now+5000}}, now), now+5000);
+  assert.equal(giftServiceUntil({enabled:true, expiresAt:{toMillis:()=>now-1}}, now), 0);
+  assert.equal(paidServiceDeadline(now, giftServiceUntil({enabled:true}, now)), now+SERVICE_MAX_MS);
+  assert.equal(paidServiceDeadline(now, giftServiceUntil({enabled:true,expiresAt:{toMillis:()=>now+3000}}, now)), now+3000);
 });
