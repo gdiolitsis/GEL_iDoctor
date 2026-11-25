@@ -17,7 +17,13 @@ service cloud.firestore {
 
       match /diagnostics/{diagnosticId} {
 
+        // Logs can only be read while the server-defined eight-hour
+        // service session is CONNECTED and unexpired. No local clock trust.
         allow read: if request.auth != null
+          && get(/databases/$(database)/documents/service_sessions/$(sessionId))
+              .data.status == 'CONNECTED'
+          && get(/databases/$(database)/documents/service_sessions/$(sessionId))
+              .data.get('serviceEndsAt', request.time) > request.time
           && (
             get(/databases/$(database)/documents/service_sessions/$(sessionId))
                 .data.technicianUid == request.auth.uid
