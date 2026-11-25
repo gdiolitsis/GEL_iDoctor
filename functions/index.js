@@ -35,14 +35,13 @@ setGlobalOptions({
 const COLLECTION = "service_sessions";
 const PAIRING_WINDOW_MS = 2 * 60 * 60 * 1000;
 const {SERVICE_MAX_MS, REMOTE_CONTROL_ENABLED, serviceActive,
-  serviceUntilMs} = require('./service-session-policy');
+  serviceUntilMs, paidUntil, paidServiceDeadline} = require('./service-session-policy');
 
 // Service pairing requires an active Play subscription on BOTH devices.
 // Tester, gift, and trial grants do not qualify.
 async function paidSubscriptionUntil(uid) {
   const doc = await db.collection('pro_paid_accounts').doc(uid).get();
-  const until = Number(doc.data()?.verifiedUntil) || 0;
-  return Number.isFinite(until) && until > Date.now() ? until : 0;
+  return paidUntil(doc.data());
 }
 
 
@@ -366,8 +365,8 @@ exports.claimServiceSession =
             const techPaidSnap = await tx.get(
               db.collection('pro_paid_accounts').doc(session.technicianUid)
             );
-            const techPaidUntil = Number(techPaidSnap.data()?.verifiedUntil) || 0;
-            if (!Number.isFinite(techPaidUntil) || techPaidUntil <= Date.now()) {
+            const techPaidUntil = paidUntil(techPaidSnap.data());
+            if (!techPaidUntil) {
               throw new HttpsError('permission-denied',
                 'An active paid GEL PRO subscription is required on the technician device.');
             }
@@ -459,8 +458,8 @@ exports.claimServiceSession =
             const connectedAtMs = Date.now();
             // The eight-hour window is an upper bound. An expiring
             // Play subscription shortens this session; it cannot extend it.
-            const serviceEndsAtMs = Math.min(
-              connectedAtMs + SERVICE_MAX_MS, customerPaidUntil, techPaidUntil
+            const serviceEndsAtMs = paidServiceDeadline(
+              connectedAtMs, techPaidUntil, customerPaidUntil
             );
             if (serviceEndsAtMs <= connectedAtMs) {
               throw new HttpsError('permission-denied', 'GEL PRO subscription expired.');
