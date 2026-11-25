@@ -137,10 +137,10 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
                             : "Pair via QR / Service Code • Read-only results • 8 hours"
             );
 
-            repairBtn.setOnClickListener(v -> {
-                if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) return;
-                startActivity(new Intent(this, RepairDeviceActivity.class));
-            });
+            repairBtn.setOnClickListener(v ->
+                GELServiceSubscriptionGate.requireTechnicianAccess(this,
+                        () -> startActivity(new Intent(this, RepairDeviceActivity.class)))
+            );
 
             root.addView(repairBtn);
 
