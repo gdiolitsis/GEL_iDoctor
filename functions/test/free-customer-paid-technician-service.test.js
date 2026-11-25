@@ -10,10 +10,11 @@ const createStart = backend.indexOf('exports.createServiceSession =');
 const claimStart = backend.indexOf('exports.claimServiceSession =');
 const cancelStart = backend.indexOf('exports.cancelServiceSession =');
 
-test('only a paid technician can initiate a service session', () => {
+test('only a paid or server-verified administrator Gift FULL ACCESS technician creates sessions', () => {
   assert.ok(createStart >= 0 && claimStart > createStart);
   const create = backend.substring(createStart, claimStart);
-  assert.match(create, /paidSubscriptionUntil\(technicianUid\)/);
+  assert.match(create, /technicianServiceGrant\(request\.auth\)/);
+  assert.match(create, /technicianGiftKey: serviceGrant\.giftHash/);
   assert.match(create, /permission-denied/);
   assert.match(create, /technicianUid/);
 });
@@ -26,9 +27,11 @@ test('free authenticated customer only joins an existing technician invitation',
   assert.match(claim, /session\.serviceCode/);
   assert.match(claim, /session\.status/);
   assert.match(claim, /paidUntil\(techPaidSnap\.data\(\)\)/);
+  assert.match(claim, /giftServiceUntil\(techGiftSnap\.data\(\)\)/);
+  assert.match(claim, /session\.technicianGiftKey/);
   assert.doesNotMatch(claim, /paidSubscriptionUntil\(customerUid\)/);
   assert.doesNotMatch(claim, /customerPaidUntil/);
-  assert.match(claim, /paidServiceDeadline\(\s*connectedAtMs, techPaidUntil/);
+  assert.match(claim, /paidServiceDeadline\(\s*connectedAtMs, techEntitlementUntil/);
   assert.doesNotMatch(claim, /\.set\(/);
 });
 
