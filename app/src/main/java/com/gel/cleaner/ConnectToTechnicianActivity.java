@@ -152,6 +152,10 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
         buildScreen();
 
+        if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) {
+            // Including Smart QR/deep-link launches. No automatic claim is made.
+            return;
+        }
         restoreStoredCustomerSession();
 
         UIHelpers.applyPressEffectRecursive(
@@ -178,6 +182,13 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
         super.onResume();
         serviceClock.removeCallbacks(serviceTick);
         serviceClock.post(serviceTick);
+        // Paid subscription is required for the entire connected session.
+        if (isStoredCustomerSessionConnected() &&
+                !GelProEntitlement.isPaidProActive(this)) {
+            requestExpiredServerTransition();
+            handleCustomerSessionEnded("SUBSCRIPTION_REQUIRED");
+            GELServiceSubscriptionGate.showRequired(this);
+        }
     }
 
     @Override
@@ -1001,6 +1012,10 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
             String serviceCode,
             long qrExpiresAt
     ) {
+        if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) {
+            return;
+        }
+
 
         if (pairingInProgress) {
 
