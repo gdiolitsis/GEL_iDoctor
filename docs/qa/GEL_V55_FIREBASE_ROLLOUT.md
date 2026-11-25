@@ -7,13 +7,12 @@ Firebase deployment logs report success on the intended project.
 
 ## Correct subscription policy
 
-- Technician: active *paid* GEL PRO, checked in `createServiceSession` and
-  again on `claimServiceSession`; this role **creates** the service code.
+- Technician: active *paid* GEL PRO **or an existing server-approved Google Gift FULL ACCESS**. Both paths are checked in `createServiceSession` and again in `claimServiceSession`. Only the technician **creates** the service code. Gift identity is derived from the verified Firebase Google sign-in token and a server-side hashed email grant; no user-entered email or Tester code authorizes this path.
 - Customer: **no purchase required**. The customer only **accepts** a
   technician-created QR / six-digit service code. Authenticated identity and
   explicit consent to sharing diagnostic logs still apply.
 - Pairing invitation expires after two hours. A connected session ends at the
-  earlier of eight hours or the **technician's** paid-subscription expiry.
+  earlier of eight hours or the **technician's** paid-subscription or approved Gift-expiration time.
 - The customer gets only session-scoped temporary diagnostic access, not a
   paid subscription or any remote-control capability.
 - The technician receives customer-only logs and can use the existing
@@ -51,9 +50,7 @@ Firebase deployment logs report success on the intended project.
 
 ## Post-deployment acceptance — mandatory before offering this feature
 
-1. From a device with an active, server-verified technician GEL PRO purchase,
-   create a session and obtain a real QR/6-digit code. A free/non-subscriber
-   must **not** be able to create a session.
+1. From a device with an active, server-verified paid GEL PRO **or approved Google Gift FULL ACCESS**, create a session and obtain a real QR/6-digit code. An ordinary non-subscriber without an approved Gift, Tester-only, or Trial-only account must **not** be able to create a session.
 2. On a second device with **no purchase**, join using the technician's code
    and approve diagnostic log sharing. The device must **not** see a
    subscription-required popup.
