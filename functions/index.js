@@ -36,31 +36,13 @@ const COLLECTION = "service_sessions";
 const PAIRING_WINDOW_MS = 2 * 60 * 60 * 1000;
 const {SERVICE_MAX_MS, REMOTE_CONTROL_ENABLED, serviceActive,
   serviceUntilMs} = require('./service-session-policy');
-const {verifiedGoogleEmail, giftKey} = require('./pro-policy');
-const {trialUntil} = require('./trial-policy');
 
-// A technician needs a server-verified paid/tester/gift/trial entitlement;
-// checking local app UI alone would let any authenticated account issue sessions.
-async function technicianServiceEntitled(request) {
-  const uid = requireAuth(request);
-  const now = Date.now();
-  const email = verifiedGoogleEmail(request.auth);
-  const [paid, tester, gift, trialExpiry] = await Promise.all([
-    db.collection('pro_paid_accounts').doc(uid).get(),
-    db.collection('tester_entitlements').doc(uid).get(),
-    email ? db.collection('pro_gift_accounts').doc(giftKey(email)).get() : null,
-    email && request.data && request.data.deviceId
-      ? trialUntil(db, email, request.data.deviceId, now) : 0,
-  ]);
-  const p = paid.data() || {};
-  const t = tester.data() || {};
-  const g = gift ? (gift.data() || {}) : {};
-  const giftExpiry = g.expiresAt?.toMillis?.() || 0;
-  return Number(p.verifiedUntil) > now ||
-    (t.enabled === true && (t.permanent === true ||
-      (t.expiresAt?.toMillis?.() || 0) > now)) ||
-    (g.enabled === true && (!giftExpiry || giftExpiry > now)) ||
-    trialExpiry > now;
+// Service pairing requires an active Play subscription on BOTH devices.
+// Tester, gift, and trial grants do not qualify.
+async function paidSubscriptionUntil(uid) {
+  const doc = await db.collection('pro_paid_accounts').doc(uid).get();
+  const until = Number(doc.data()?.verifiedUntil) || 0;
+  return Number.isFinite(until) && until > Date.now() ? until : 0;
 }
 
 
@@ -233,9 +215,9 @@ exports.createServiceSession =
       const technicianUid =
         requireAuth(request);
 
-      if (!(await technicianServiceEntitled(request))) {
+      if (!(await paidSubscriptionUntil(technicianUid))) {
         throw new HttpsError('permission-denied',
-          'An active server-verified GEL PRO entitlement is required for technician service.');
+          'An active paid GEL PRO subscription is required for technician connection.');
       }
 
       const createdAtMs =
@@ -303,6 +285,11 @@ exports.claimServiceSession =
     async (request) => {
       const customerUid =
         requireAuth(request);
+      const customerPaidUntil = await paidSubscriptionUntil(customerUid);
+      if (!customerPaidUntil) {
+        throw new HttpsError('permission-denied',
+          'An active paid GEL PRO subscription is required on the customer device.');
+      }
 
       const data =
         request.data || {};
@@ -375,6 +362,15 @@ exports.claimServiceSession =
 
             const session =
               snap.data();
+
+            const techPaidSnap = await tx.get(
+              db.collection('pro_paid_accounts').doc(session.technicianUid)
+            );
+            const techPaidUntil = Number(techPaidSnap.data()?.verifiedUntil) || 0;
+            if (!Number.isFinite(techPaidUntil) || techPaidUntil <= Date.now()) {
+              throw new HttpsError('permission-denied',
+                'An active paid GEL PRO subscription is required on the technician device.');
+            }
 
             if (
               session.serviceCode !==
@@ -461,7 +457,14 @@ exports.claimServiceSession =
             }
 
             const connectedAtMs = Date.now();
-            const serviceEndsAtMs = connectedAtMs + SERVICE_MAX_MS;
+            // The eight-hour window is an upper bound. An expiring
+            // Play subscription shortens this session; it cannot extend it.
+            const serviceEndsAtMs = Math.min(
+              connectedAtMs + SERVICE_MAX_MS, customerPaidUntil, techPaidUntil
+            );
+            if (serviceEndsAtMs <= connectedAtMs) {
+              throw new HttpsError('permission-denied', 'GEL PRO subscription expired.');
+            }
             tx.update(
               ref,
               {
