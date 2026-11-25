@@ -240,9 +240,11 @@ public final class GELRemoteDiagnosticsSync {
         if (!connected ||
                 sessionId == null ||
                 sessionId.trim().isEmpty()) {
-
-            // Do not clear queued lines belonging to an in-flight request.
-            // Simply stop capturing until there is a valid customer session.
+            // Once the lease ends, no stale logs may be transmitted
+            // after a later session is established.
+            activeSessionId = null;
+            pendingLines.clear();
+            lastCapturedLogText = "";
             return false;
         }
 
@@ -371,6 +373,7 @@ public final class GELRemoteDiagnosticsSync {
 
             if (inFlight ||
                     activeSessionId == null ||
+                    !GELCustomerServiceAccess.isActive(appContext) ||
                     pendingLines.isEmpty() ||
                     firebaseAuth == null ||
                     firebaseFunctions == null) {
