@@ -1007,18 +1007,44 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
     // ============================================================
     // REAL FIREBASE CLAIM
     // ============================================================
+    private boolean consentDialogOpen;
+
     private void claimServiceSession(
             @Nullable String sessionId,
             String serviceCode,
             long qrExpiresAt
     ) {
-        if (!GELServiceSubscriptionGate.requirePaidSubscription(this)) {
-            return;
-        }
+        if (!GELServiceSubscriptionGate.requirePaidSubscription(this) ||
+                pairingInProgress || consentDialogOpen) return;
 
+        // Explicit consent for sharing diagnostic logs; QR links never silently
+        // start data transfer or enable remote screen/command control.
+        consentDialogOpen = true;
+        AlertDialog consent = new AlertDialog.Builder(this)
+                .setTitle(gr ? "ΣΥΝΔΕΣΗ ΜΕ ΤΕΧΝΙΚΟ" : "CONNECT TO TECHNICIAN")
+                .setMessage(gr
+                        ? "Με τη σύνδεση, τα διαγνωστικά logs που θα παράγει το GEL iDoctor "
+                          + "θα κοινοποιούνται στον συνδεδεμένο τεχνικό μέσω Firebase "
+                          + "για έως 8 ώρες. Δεν επιτρέπεται απομακρυσμένος χειρισμός "
+                          + "της συσκευής. Μπορείτε να τερματίσετε τη συνεδρία ανά πάσα στιγμή."
+                        : "By connecting, the GEL iDoctor diagnostic logs generated during "
+                          + "the session will be shared with the paired technician through "
+                          + "Firebase for up to eight hours. No remote device control is "
+                          + "enabled. You may terminate the session at any time.")
+                .setNegativeButton(gr ? "ΑΚΥΡΩΣΗ" : "CANCEL", null)
+                .setPositiveButton(gr ? "ΣΥΝΔΕΣΗ & ΚΟΙΝΟΠΟΙΗΣΗ" : "CONNECT & SHARE",
+                        (dialog, which) -> beginClaimServiceSession(sessionId, serviceCode, qrExpiresAt))
+                .create();
+        consent.setOnDismissListener(d -> consentDialogOpen = false);
+        consent.show();
+    }
 
-        if (pairingInProgress) {
-
+    private void beginClaimServiceSession(
+            @Nullable String sessionId,
+            String serviceCode,
+            long qrExpiresAt
+    ) {
+        if (pairingInProgress || !GELServiceSubscriptionGate.requirePaidSubscription(this)) {
             return;
         }
 
