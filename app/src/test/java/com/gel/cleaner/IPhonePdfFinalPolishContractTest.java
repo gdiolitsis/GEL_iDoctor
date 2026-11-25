@@ -56,7 +56,11 @@ public final class IPhonePdfFinalPolishContractTest {
         String s=source("ServiceReportActivity.java");
         assertTrue(s.contains("Host / Συσκευή GEL:<br>"));
         assertTrue(s.contains("Host Android / Android GEL:<br>"));
-        assertTrue(s.contains("String deviceLine = \"Host / Συσκευή GEL: \""));
+        // Local source retains Host labeling; remote source explicitly
+        // identifies that host as the technician's device.
+        assertTrue(s.contains("String deviceLine = (remoteSessionId == null"));
+        assertTrue(s.contains("\"Host / Συσκευή GEL: \""));
+        assertTrue(s.contains("\"Technician host / Συσκευή τεχνικού: \""));
         assertTrue(s.contains("String osLine = \"Host Android / Android GEL: \""));
         assertFalse(s.contains("body.append(\"Device / Συσκευή:<br>\")"));
     }
