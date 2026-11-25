@@ -765,8 +765,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         firebaseFunctions
                 .getHttpsCallable("createServiceSession")
-                .call(java.util.Collections.singletonMap(
-                        "deviceId", GelTrialAccess.deviceId(this)))
+                .call()
                 .addOnCompleteListener(
                         this,
                         task -> {
@@ -776,6 +775,12 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                             if (!task.isSuccessful() ||
                                     task.getResult() == null ||
                                     !(task.getResult().getData() instanceof java.util.Map)) {
+
+                                if (task.getException() instanceof com.google.firebase.functions.FirebaseFunctionsException
+                                        && ((com.google.firebase.functions.FirebaseFunctionsException) task.getException())
+                                            .getCode() == com.google.firebase.functions.FirebaseFunctionsException.Code.PERMISSION_DENIED) {
+                                    GELServiceSubscriptionGate.showRequired(this);
+                                }
 
                                 String message =
                                         task.getException() != null
