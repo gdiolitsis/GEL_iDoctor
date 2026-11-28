@@ -1661,71 +1661,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // GEL PRO
     // ============================================================
     private boolean isGelProActive() {
-        // Only paid GEL PRO or verified administrator Gift FULL ACCESS.
-        return GelProEntitlement.isPaidProActive(this) || GelAccountPro.active(this);
-    }
-
-    private void showGelProRequiredDialog() {
-        final Dialog dialog = new Dialog(
-                this,
-                android.R.style.Theme_Material_NoActionBar_TranslucentDecor
-        );
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setCancelable(true);
-        dialog.setCanceledOnTouchOutside(true);
-
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(20), dp(18), dp(20), dp(16));
-
-        GradientDrawable boxBg = new GradientDrawable();
-        boxBg.setColor(0xFF0B0B0B);
-        boxBg.setCornerRadius(dp(14));
-        boxBg.setStroke(dp(2), 0xFFFFD700);
-        box.setBackground(boxBg);
-
-        TextView title = new TextView(this);
-        title.setText("🔒 GEL PRO — Technician Service");
-        title.setTextColor(0xFFFFD700);
-        title.setTextSize(19f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(2), 0, dp(14));
-        box.addView(title);
-
-        View divider = new View(this);
-        GradientDrawable dividerBg = new GradientDrawable();
-        dividerBg.setColor(0xFFFFD700);
-        divider.setBackground(dividerBg);
-        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
-        dividerLp.setMargins(0, 0, 0, dp(16));
-        divider.setLayoutParams(dividerLp);
-        box.addView(divider);
-
-        TextView message = new TextView(this);
-        message.setText(
-                gr
-                        ? "Η λειτουργία «Απομακρυσμένη Διάγνωση & Υποστήριξη Συσκευής» είναι διαθέσιμη μόνο σε επαγγελματίες τεχνικούς με ενεργή συνδρομή GEL PRO.\n\n"
-                          + "Η συνδρομή ενεργοποιεί τα Smart Technician Service Sessions για σύνδεση και διάγνωση συσκευών πελατών."
-                        : "Remote Device Diagnostics & Support is available only to professional technicians with an active GEL PRO subscription.\n\n"
-                          + "The subscription enables Smart Technician Service Sessions for connecting and diagnosing customer devices."
-        );
-        message.setTextColor(0xFFE6E6E6);
-        message.setTextSize(15f);
-        message.setGravity(Gravity.CENTER);
-        message.setLineSpacing(0f, 1.20f);
-        message.setPadding(dp(4), 0, dp(4), dp(18));
-        box.addView(message);
-
-        Button ok = buildGelDialogButton("OK");
-        ok.setOnClickListener(v -> dialog.dismiss());
-        box.addView(ok);
-
-        dialog.setContentView(box);
-        dialog.show();
-        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
-        applyGelDialogWindow(dialog);
+        return GELServiceSubscriptionGate.hasTechnicianAccess(this);
     }
 
     // ============================================================

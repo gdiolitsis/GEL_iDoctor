@@ -5,7 +5,7 @@ const {onMessagePublished} = require('firebase-functions/v2/pubsub');
 const {getFirestore} = require('firebase-admin/firestore');
 const {GoogleAuth} = require('google-auth-library');
 const crypto = require('node:crypto');
-const {verifiedGoogleEmail, giftKey, giftResult} = require('./pro-policy');
+const {verifiedGoogleEmail, giftKey, giftResult, testerUntil} = require('./pro-policy');
 const {trialUntil} = require('./trial-policy');
 const publisher = new GoogleAuth({scopes:['https://www.googleapis.com/auth/androidpublisher']});
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -50,11 +50,10 @@ async function requirePro(db, uid, email, trialExpiry = 0) {
     db.collection('pro_gift_accounts').doc(giftKey(email)).get(),
     db.collection('tester_entitlements').doc(uid).get(),
   ]);
-  const t = tester.data() || {};
   // Every enabled gift includes personalisation. Never turn it into paid ownership in the ledger.
   const giftFullAccess = giftResult(gift.data()).active;
   if (Number(paid.data()?.verifiedUntil) > Date.now() || giftFullAccess || trialExpiry > Date.now() ||
-      (t.enabled === true && (t.permanent === true || (t.expiresAt?.toMillis?.() || 0) > Date.now()))) return giftFullAccess;
+      testerUntil(tester.data()) > 0) return giftFullAccess;
   throw new HttpsError('failed-precondition', 'Active PRO is required. Restore PRO first.');
 }
 exports.getReportEntitlements = callable(async request => {
@@ -142,13 +141,21 @@ exports.handleReportPurchaseNotification = onMessagePublished({topic:'gel-play-r
   }
 });
 exports.prepareReportExport = callable(async request => {
-  const {uid,email} = identity(request); const id = reportId(request); const db = getFirestore();
-  const trialExpiry = await trialUntil(db,email,request.data?.deviceId);
-  const giftFullAccess = await requirePro(db,uid,email,trialExpiry);
+  const id = reportId(request);
   const mode = request.data?.mode;
   const attempt = attemptId(request);
-  const reservationKey = id + ':' + attempt;
   if (!['single','unlimited'].includes(mode)) throw new HttpsError('invalid-argument','Invalid export mode.');
+  const db = getFirestore();
+  const testerUid = request.auth?.uid;
+  if (mode === 'unlimited' && testerUid) {
+    const tester = await db.collection('tester_entitlements').doc(testerUid).get();
+    // Tester branding is a time-limited feature grant. It never accesses the purchase ledger.
+    if (testerUntil(tester.data()) > 0) return {allowed:true};
+  }
+  const {uid,email} = identity(request);
+  const trialExpiry = await trialUntil(db,email,request.data?.deviceId);
+  const giftFullAccess = await requirePro(db,uid,email,trialExpiry);
+  const reservationKey = id + ':' + attempt;
   const account = ledger(db,uid); const report = account.collection('reports').doc(id);
   if (giftFullAccess) return {allowed:true,...view((await account.get()).data(),true)};
   if (trialExpiry > Date.now()) {

@@ -408,7 +408,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         useProfessionalBrandingForCurrentExport = choice != 0;
         useSingleReportCreditForCurrentExport = choice == 1;
         if (choice == 0) { continuePreparedExport(); return; }
-        if (GelReportStore.uid().isEmpty()) {
+        String reportOwner = GelReportStore.exportUid(this, choice == 2);
+        if (reportOwner.isEmpty()) {
             Toast.makeText(this, AppLang.isGreek(this)
                     ? "Συνδεθείτε με Google για αγορά και επαναφορά εξατομικευμένων αναφορών."
                     : "Sign in with Google for personalised report purchases and recovery.", Toast.LENGTH_LONG).show();
@@ -416,10 +417,10 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         }
         singleReportIdentity = reportIdentity();
         exportAttempt = java.util.UUID.randomUUID().toString();
-        exportOwner = GelReportStore.uid();
+        exportOwner = reportOwner;
         final String identity = singleReportIdentity;
         final String attempt = exportAttempt;
-        final boolean giftedCustomerExport = remoteSessionId != null && GelAccountPro.active(this);
+        final boolean includedBranding = GelReportStore.hasIncludedBranding(this);
         lockExportUI(true);
 
         // Server verification is separate from WebView loading. It also needs
@@ -452,7 +453,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                             if (choice == 1 && "RESOURCE_EXHAUSTED".equals(code)) {
                                 pendingSingleReportExport = true;
                                 billingManager.launchSingleReportPurchase(this);
-                            } else if (choice == 2 && !giftedCustomerExport && "PERMISSION_DENIED".equals(code)) {
+                            } else if (choice == 2 && !includedBranding && "PERMISSION_DENIED".equals(code)) {
                                 billingManager.launchCustomReportsPurchase(this);
                             } else {
                                 Toast.makeText(this, message, Toast.LENGTH_LONG).show();
@@ -515,16 +516,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                         ? billingManager.isGelProActive()
                         : isGelProActive();
 
-        final boolean unlimitedPersonalisation =
-                gelProActive
-                        && billingManager != null
-                        && billingManager.isCustomReportsActive();
-
-        final boolean singleReportCredit =
-                billingManager != null
-                        && billingManager.hasSingleReportCredit();
-
-        // Re-check the paid export entitlement immediately before export.
+        // Re-check PRO access immediately before export.
         if (!gelProActive) {
             finishSingleReport(false);
             useSingleReportCreditForCurrentExport = false;
@@ -534,7 +526,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         }
 
         if (reportBrandingChoice != 0 && (!reportServerAuthorised
-                || !exportOwner.equals(GelReportStore.uid()) || !singleReportIdentity.equals(reportIdentity()))) {
+                || !exportOwner.equals(GelReportStore.exportUid(this, reportBrandingChoice == 2)) || !singleReportIdentity.equals(reportIdentity()))) {
             finishSingleReport(false);
             prepareReportExport(reportBrandingChoice); return;
         }
@@ -576,9 +568,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     private void showPersonalisedReportPurchaseDialog() {
         final boolean gr = AppLang.isGreek(this);
         final boolean proActive = billingManager != null && billingManager.isGelProActive();
-        final boolean giftedCustomerExport = remoteSessionId != null && GelAccountPro.active(this);
-        final boolean unlimitedOwned = proActive
-                && (giftedCustomerExport || billingManager.isCustomReportsActive());
+        final boolean unlimitedOwned = proActive && billingManager.isCustomReportsActive();
         final boolean creditAvailable = proActive && billingManager.hasSingleReportCredit();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(
@@ -598,8 +588,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         msg.setText(!proActive
                 ? (gr ? "Η εξαγωγή απαιτεί ενεργό GEL PRO. Επιλέξτε έναν μήνα με ή χωρίς αυτόματη ανανέωση, με 4,99€. Οι αναφορές με λογότυπο GEL περιλαμβάνονται. Η εξατομίκευση αγοράζεται χωριστά μετά την ενεργοποίηση PRO."
                       : "Export requires active GEL PRO. Choose one month with or without auto-renewal for €4.99. Reports with the GEL logo are included. Personalisation is purchased separately after PRO activation.")
-                : (gr ? "Οι αναφορές με λογότυπο GEL περιλαμβάνονται στο ενεργό PRO. Η εξατομίκευση απαιτεί ενεργό PRO. Η επανεξαγωγή της ίδιας αναφοράς δεν καταναλώνει επιπλέον credit."
-                      : "Reports with the GEL logo are included in active PRO. Personalisation requires active PRO. Re-exporting the same report uses no additional credit."));
+                : (gr ? "Οι αναφορές με λογότυπο GEL περιλαμβάνονται στο ενεργό PRO. Η εξατομίκευση περιλαμβάνεται στο Gift FULL ACCESS και στο Tester PRO. Η επανεξαγωγή της ίδιας αναφοράς δεν καταναλώνει επιπλέον credit."
+                      : "Reports with the GEL logo are included in active PRO. Personalisation is included with Gift FULL ACCESS and Tester PRO. Re-exporting the same report uses no additional credit."));
         msg.setTextColor(0xFF00FF9C);
         msg.setTextSize(14f);
         msg.setPadding(0, dp(14), 0, dp(8));
@@ -2783,7 +2773,7 @@ private String buildHtmlReport(String report) {
         int y = startY;
 
         // Page-1 identity.
-        // Saved professional branding is a separate paid entitlement.
+        // Render the professional branding authorized for this export.
         if (useProfessionalBrandingForCurrentExport) {
             Bitmap professionalLogo = getProfessionalLogoBitmap();
             if (professionalLogo != null) {

@@ -541,7 +541,7 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
 
         if (!isGelProActive()) {
             listener.onBillingError(
-                    "An active paid GEL PRO subscription is required first."
+                    "Active PRO access is required for personalised reports."
             );
             return;
         }

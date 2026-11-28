@@ -85,7 +85,7 @@ public final class GELRemoteCustomerReportContractTest {
         assertEquals(-1, invalid.valueStart);
     }
 
-    @Test public void giftedTechnicianCanOpenAndExportCustomerReport() throws Exception {
+    @Test public void giftedAndTesterTechniciansCanOpenAndExportCustomerReport() throws Exception {
         String viewer = source("GELReadOnlyDiagnosticsActivity.java");
         String loader = source("GELRemoteServiceReportLoader.java");
         String report = source("ServiceReportActivity.java");
@@ -94,8 +94,10 @@ public final class GELRemoteCustomerReportContractTest {
         assertTrue(loader.contains("GELServiceSubscriptionGate.hasTechnicianAccess(context)"));
         assertFalse(viewer.contains("isPaidProActive("));
         assertFalse(loader.contains("isPaidProActive("));
-        assertTrue(report.contains("giftedCustomerExport || billingManager.isCustomReportsActive()"));
-        assertTrue(report.contains("choice == 2 && !giftedCustomerExport"));
+        String store = source("GelReportStore.java");
+        assertTrue(store.contains("return GelAccountPro.active(context) || GelProEntitlement.isTesterProActive(context)"));
+        assertTrue(store.contains("call(c,\"prepareReportExport\",args,testerExport,callback)"));
+        assertTrue(report.contains("choice == 2 && !includedBranding"));
     }
 
     @Test public void customerMustConsentBeforeDiagnosticSharing() throws Exception {

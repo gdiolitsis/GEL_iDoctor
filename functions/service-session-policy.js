@@ -26,7 +26,7 @@ function clampServiceEnd(connectedAtMs, now = Date.now()) {
   return Math.min(connectedAtMs + SERVICE_MAX_MS, now + SERVICE_MAX_MS);
 }
 
-// Paid Play entitlement is verified on the server; Tester/Trial never qualify.
+// Paid Play entitlement is verified independently of Gift and Tester grants.
 function paidUntil(account, now = Date.now()) {
   const until = Number(account?.verifiedUntil) || 0;
   return Number.isFinite(until) && until > now ? until : 0;
@@ -43,7 +43,7 @@ function giftServiceUntil(grant, now = Date.now()) {
 }
 
 // Customer access is a free, session-scoped grant. Only the technician
-// must have a paid GEL PRO entitlement to initiate and maintain service.
+// needs an active technician entitlement to initiate and maintain service.
 function paidServiceDeadline(connectedAtMs, technicianUntil) {
   if (!Number.isFinite(connectedAtMs) || connectedAtMs <= 0) return 0;
   if (!Number.isFinite(technicianUntil) || technicianUntil <= connectedAtMs) return 0;

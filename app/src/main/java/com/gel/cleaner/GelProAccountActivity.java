@@ -189,7 +189,17 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String identity = user != null && !user.isAnonymous() ? user.getEmail()
                 : (gr ? "Δεν έχετε συνδεθεί με Google." : "Not signed in with Google.");
-        status.setText(identity + "\n\n" + (GelTrialAccess.active(this)
+        String testerStatus = "";
+        if (GelProEntitlement.isTesterProActive(this)) {
+            testerStatus = gr ? "Tester PRO ενεργό" : "Tester PRO active";
+            if (!GelProEntitlement.isTesterPermanent(this)) {
+                String expiry = java.text.DateFormat.getDateTimeInstance().format(
+                        new java.util.Date(GelProEntitlement.getTesterExpiresAtMs(this)));
+                testerStatus = (gr ? "Tester PRO ενεργό έως " : "Tester PRO active until ") + expiry;
+            }
+            testerStatus += "\n\n";
+        }
+        status.setText(identity + "\n\n" + testerStatus + (GelTrialAccess.active(this)
                 ? (gr ? "Δοκιμή FULL ACCESS έως: " : "FULL ACCESS trial until: ") + java.text.DateFormat.getDateTimeInstance().format(new java.util.Date(GelTrialAccess.expiresAt(this))) + "\n\n" : "") + (GelProEntitlement.isPaidProActive(this)
                 ? (gr ? "Συνδρομή PRO ενεργή μέσω Google Play." : "Paid PRO active through Google Play.")
                 : "") + "\n" + (GelAccountPro.active(this)
