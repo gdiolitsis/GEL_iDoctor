@@ -53,7 +53,7 @@ public final class GELRemoteServiceReportLoader {
 
     public static boolean sessionValid(Context context, String sessionId) {
         if (context == null || sessionId == null || sessionId.trim().isEmpty()
-                || !GelProEntitlement.isPaidProActive(context)) return false;
+                || !GELServiceSubscriptionGate.hasTechnicianAccess(context)) return false;
         SharedPreferences p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         return sessionId.equals(p.getString("session_id", ""))
                 && p.getBoolean("session_connected", false)
@@ -62,7 +62,7 @@ public final class GELRemoteServiceReportLoader {
 
     public static void fetch(Context context, String sessionId, Callback callback) {
         if (!sessionValid(context, sessionId)) {
-            callback.completed(null, "The paid technician Service Session is no longer active.");
+            callback.completed(null, "The technician Service Session is no longer active.");
             return;
         }
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();

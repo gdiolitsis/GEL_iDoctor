@@ -1,6 +1,7 @@
 package com.gel.cleaner;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -12,6 +13,10 @@ import androidx.appcompat.app.AlertDialog;
 public final class GELServiceSubscriptionGate {
     private GELServiceSubscriptionGate() {}
 
+    static boolean hasTechnicianAccess(Context context) {
+        return GelProEntitlement.isPaidProActive(context) || GelAccountPro.active(context);
+    }
+
     /**
      * Technician can create sessions when Play PRO is active or a verified
      * administrator-granted Google Gift FULL ACCESS is active. Tester and
@@ -22,8 +27,7 @@ public final class GELServiceSubscriptionGate {
      */
     public static void requireTechnicianAccess(Activity activity, Runnable allowed) {
         if (activity == null || activity.isFinishing() || allowed == null) return;
-        if (GelProEntitlement.isPaidProActive(activity) ||
-                GelAccountPro.active(activity)) {
+        if (hasTechnicianAccess(activity)) {
             allowed.run();
             return;
         }
@@ -33,7 +37,7 @@ public final class GELServiceSubscriptionGate {
             GelAccountPro.refresh(activity, (active, message) ->
                     activity.runOnUiThread(() -> {
                         if (activity.isFinishing() || activity.isDestroyed()) return;
-                        if (active || GelProEntitlement.isPaidProActive(activity)) {
+                        if (hasTechnicianAccess(activity)) {
                             allowed.run();
                         } else {
                             showRequired(activity);
@@ -51,13 +55,13 @@ public final class GELServiceSubscriptionGate {
                 androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
                 .setTitle(gr ? "ΑΠΑΙΤΕΙΤΑΙ GEL PRO Ή FULL ACCESS" : "GEL PRO OR FULL ACCESS REQUIRED")
                 .setMessage(gr
-                        ? "Για δημιουργία συνεδρίας τεχνικού απαιτείται ενεργή συνδρομή GEL PRO "
+                        ? "Για τη συνεδρία τεχνικού απαιτείται ενεργή συνδρομή GEL PRO "
                           + "ή εγκεκριμένη δωρεάν FULL ACCESS μέσω Google. Ο πελάτης συνδέεται δωρεάν. "
                           + "Οι κωδικοί Tester και η δοκιμαστική πρόσβαση δεν αρκούν. "
                           + "Μπορείτε να ελέγξετε το FULL ACCESS ή να επαναφέρετε τη συνδρομή σας."
-                        : "Creating a customer Service Session requires a paid GEL PRO subscription for the technician. The customer joins for free with QR or code. "
-                          + "Tester, Gift and Trial access cannot create technician sessions. "
-                          + "You can subscribe or restore your existing Play purchase.")
+                        : "Technician Service Sessions require active paid GEL PRO or approved Google Gift FULL ACCESS. "
+                          + "The customer joins for free with QR or code. Tester and trial access do not qualify. "
+                          + "You can check your FULL ACCESS or restore your Play purchase.")
                 .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
                 .setPositiveButton(gr ? "Έλεγχος FULL ACCESS / PRO" : "Check FULL ACCESS / PRO",
                         (d, w) -> activity.startActivity(

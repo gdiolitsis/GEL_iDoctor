@@ -352,15 +352,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                     ? "ΑΝΑΝΕΩΣΗ ΔΙΑΓΝΩΣΤΙΚΩΝ ΠΕΛΑΤΗ"
                     : "REFRESH CUSTOMER DIAGNOSTICS");
             reloadCustomer.setAllCaps(false);
-            reloadCustomer.setOnClickListener(v -> {
-                if (!GELRemoteServiceReportLoader.sessionValid(this, remoteSessionId)) {
-                    Toast.makeText(this, AppLang.isGreek(this)
-                            ? "Η συνεδρία πελάτη έληξε."
-                            : "Customer session expired.", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                loadCustomerReport();
-            });
+            reloadCustomer.setOnClickListener(v ->
+                    GELServiceSubscriptionGate.requireTechnicianAccess(this, this::loadCustomerReport));
             root.addView(reloadCustomer);
         }
 
@@ -385,6 +378,11 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     private boolean reportServerAuthorised;
 
     private void beginReportExport(boolean html) {
+        if (remoteSessionId != null && remoteReport != null
+                && !GELServiceSubscriptionGate.hasTechnicianAccess(this)) {
+            GELServiceSubscriptionGate.requireTechnicianAccess(this, () -> beginReportExport(html));
+            return;
+        }
         if (!remoteReportAllowed()) {
             Toast.makeText(this, AppLang.isGreek(this)
                     ? "Η αναφορά πελάτη δεν φορτώθηκε ή η συνεδρία έληξε."
@@ -397,6 +395,10 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     private void prepareReportExport(int choice) {
+        if (remoteSessionId != null && !GELServiceSubscriptionGate.hasTechnicianAccess(this)) {
+            GELServiceSubscriptionGate.requireTechnicianAccess(this, () -> prepareReportExport(choice));
+            return;
+        }
         reportBrandingChoice = choice;
         reportServerAuthorised = false;
         if (billingManager == null || !billingManager.isGelProActive()) {
@@ -417,6 +419,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         exportOwner = GelReportStore.uid();
         final String identity = singleReportIdentity;
         final String attempt = exportAttempt;
+        final boolean giftedCustomerExport = remoteSessionId != null && GelAccountPro.active(this);
         lockExportUI(true);
 
         // Server verification is separate from WebView loading. It also needs
@@ -449,7 +452,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                             if (choice == 1 && "RESOURCE_EXHAUSTED".equals(code)) {
                                 pendingSingleReportExport = true;
                                 billingManager.launchSingleReportPurchase(this);
-                            } else if (choice == 2 && "PERMISSION_DENIED".equals(code)) {
+                            } else if (choice == 2 && !giftedCustomerExport && "PERMISSION_DENIED".equals(code)) {
                                 billingManager.launchCustomReportsPurchase(this);
                             } else {
                                 Toast.makeText(this, message, Toast.LENGTH_LONG).show();
@@ -573,7 +576,9 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     private void showPersonalisedReportPurchaseDialog() {
         final boolean gr = AppLang.isGreek(this);
         final boolean proActive = billingManager != null && billingManager.isGelProActive();
-        final boolean unlimitedOwned = proActive && billingManager.isCustomReportsActive();
+        final boolean giftedCustomerExport = remoteSessionId != null && GelAccountPro.active(this);
+        final boolean unlimitedOwned = proActive
+                && (giftedCustomerExport || billingManager.isCustomReportsActive());
         final boolean creditAvailable = proActive && billingManager.hasSingleReportCredit();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(

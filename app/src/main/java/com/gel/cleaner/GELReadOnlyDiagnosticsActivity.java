@@ -58,9 +58,7 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
         super.onCreate(state);
         sessionId = getIntent().getStringExtra("sessionId");
         if (!isLive()) {
-            Toast.makeText(this, AppLang.isGreek(this)
-                    ? "Δεν υπάρχει ενεργή σύνδεση πελάτη."
-                    : "No active customer connection.", Toast.LENGTH_LONG).show();
+            showInactiveSession(AppLang.isGreek(this));
             finish();
             return;
         }
@@ -102,30 +100,40 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
         report.setAllCaps(false);
         report.setText(gr ? "ΕΞΑΓΩΓΗ SERVICE REPORT ΠΕΛΑΤΗ"
                 : "EXPORT CUSTOMER SERVICE REPORT");
-        report.setTextColor(0xFF39FF14);
+        GELServiceUi.styleButton(report, R.drawable.gel_btn_green_gold, Color.BLACK);
         report.setTextSize(16f);
         report.setOnClickListener(v -> {
-            if (!isLive() || !GelProEntitlement.isPaidProActive(this)) {
-                Toast.makeText(this, gr
-                        ? "Απαιτείται ενεργή συνεδρία και συνδρομή GEL PRO."
-                        : "An active session and paid GEL PRO subscription are required.",
-                        Toast.LENGTH_LONG).show();
+            if (!isLive()) {
+                showInactiveSession(gr);
                 return;
             }
-            Intent intent = new Intent(this, ServiceReportActivity.class);
-            intent.putExtra(GELRemoteServiceReportLoader.EXTRA_SESSION_ID, sessionId);
-            startActivity(intent);
+            GELServiceSubscriptionGate.requireTechnicianAccess(this, () -> {
+                if (!isLive()) {
+                    showInactiveSession(gr);
+                    return;
+                }
+                Intent intent = new Intent(this, ServiceReportActivity.class);
+                intent.putExtra(GELRemoteServiceReportLoader.EXTRA_SESSION_ID, sessionId);
+                startActivity(intent);
+            });
         });
         root.addView(report);
 
         com.gel.cleaner.GelButton exit = new com.gel.cleaner.GelButton(this);
         exit.setAllCaps(false);
         exit.setText(gr ? "ΕΠΙΣΤΡΟΦΗ" : "BACK");
-        exit.setTextColor(Color.WHITE);
+        GELServiceUi.styleButton(exit, R.drawable.gel_btn_danger_outline, Color.WHITE);
         exit.setTextSize(16f);
         exit.setOnClickListener(v -> finish());
-        root.addView(exit);
+        LinearLayout.LayoutParams exitParams = new LinearLayout.LayoutParams(-1, -2);
+        exitParams.topMargin = dp(8);
+        root.addView(exit, exitParams);
         setContentView(root);
+    }
+
+    private void showInactiveSession(boolean gr) {
+        Toast.makeText(this, gr ? "Δεν υπάρχει ενεργή σύνδεση πελάτη."
+                : "No active customer connection.", Toast.LENGTH_LONG).show();
     }
 
     private boolean isLive() {

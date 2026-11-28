@@ -31,12 +31,11 @@ public final class GELPaidServiceConnectionContractTest {
 
     @Test public void paidAndVerifiedGiftFullAccessCanCreateButTesterCannot() throws Exception {
         String gate = source("GELServiceSubscriptionGate.java");
-        assertTrue(gate.contains("GelProEntitlement.isPaidProActive(activity)"));
-        assertTrue(gate.contains("GelAccountPro.active(activity)"));
+        assertTrue(gate.contains("GelProEntitlement.isPaidProActive(context) || GelAccountPro.active(context)"));
         assertTrue(gate.contains("GelAccountPro.refresh(activity"));
         assertTrue(gate.contains("ΑΠΑΙΤΕΙΤΑΙ GEL PRO Ή FULL ACCESS"));
         assertTrue(gate.contains("GelProAccountActivity.class"));
-        assertFalse(gate.contains("GelProEntitlement.isActive(activity)"));
+        assertFalse(gate.contains("GelProEntitlement.isActive("));
         assertFalse(gate.contains("isTesterProActive"));
     }
 

@@ -65,6 +65,19 @@ public final class GELRemoteCustomerReportContractTest {
         assertFalse(viewer.contains("GELRemoteAssistActivity.class"));
     }
 
+    @Test public void giftedTechnicianCanOpenAndExportCustomerReport() throws Exception {
+        String viewer = source("GELReadOnlyDiagnosticsActivity.java");
+        String loader = source("GELRemoteServiceReportLoader.java");
+        String report = source("ServiceReportActivity.java");
+
+        assertTrue(viewer.contains("GELServiceSubscriptionGate.requireTechnicianAccess(this"));
+        assertTrue(loader.contains("GELServiceSubscriptionGate.hasTechnicianAccess(context)"));
+        assertFalse(viewer.contains("isPaidProActive("));
+        assertFalse(loader.contains("isPaidProActive("));
+        assertTrue(report.contains("giftedCustomerExport || billingManager.isCustomReportsActive()"));
+        assertTrue(report.contains("choice == 2 && !giftedCustomerExport"));
+    }
+
     @Test public void customerMustConsentBeforeDiagnosticSharing() throws Exception {
         String pairing = source("ConnectToTechnicianActivity.java");
         assertTrue(pairing.contains("ΣΥΝΔΕΣΗ & ΚΟΙΝΟΠΟΙΗΣΗ"));
