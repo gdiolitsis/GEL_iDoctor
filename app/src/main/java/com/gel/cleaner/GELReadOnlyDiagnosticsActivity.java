@@ -7,6 +7,7 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.SpannableStringBuilder;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -58,9 +59,7 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
         super.onCreate(state);
         sessionId = getIntent().getStringExtra("sessionId");
         if (!isLive()) {
-            Toast.makeText(this, AppLang.isGreek(this)
-                    ? "Δεν υπάρχει ενεργή σύνδεση πελάτη."
-                    : "No active customer connection.", Toast.LENGTH_LONG).show();
+            showInactiveSession(AppLang.isGreek(this));
             finish();
             return;
         }
@@ -102,30 +101,40 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
         report.setAllCaps(false);
         report.setText(gr ? "ΕΞΑΓΩΓΗ SERVICE REPORT ΠΕΛΑΤΗ"
                 : "EXPORT CUSTOMER SERVICE REPORT");
-        report.setTextColor(0xFF39FF14);
+        GELServiceUi.styleButton(report, R.drawable.gel_btn_green_gold, Color.BLACK);
         report.setTextSize(16f);
         report.setOnClickListener(v -> {
-            if (!isLive() || !GelProEntitlement.isPaidProActive(this)) {
-                Toast.makeText(this, gr
-                        ? "Απαιτείται ενεργή συνεδρία και συνδρομή GEL PRO."
-                        : "An active session and paid GEL PRO subscription are required.",
-                        Toast.LENGTH_LONG).show();
+            if (!isLive()) {
+                showInactiveSession(gr);
                 return;
             }
-            Intent intent = new Intent(this, ServiceReportActivity.class);
-            intent.putExtra(GELRemoteServiceReportLoader.EXTRA_SESSION_ID, sessionId);
-            startActivity(intent);
+            GELServiceSubscriptionGate.requireTechnicianAccess(this, () -> {
+                if (!isLive()) {
+                    showInactiveSession(gr);
+                    return;
+                }
+                Intent intent = new Intent(this, ServiceReportActivity.class);
+                intent.putExtra(GELRemoteServiceReportLoader.EXTRA_SESSION_ID, sessionId);
+                startActivity(intent);
+            });
         });
         root.addView(report);
 
         com.gel.cleaner.GelButton exit = new com.gel.cleaner.GelButton(this);
         exit.setAllCaps(false);
         exit.setText(gr ? "ΕΠΙΣΤΡΟΦΗ" : "BACK");
-        exit.setTextColor(Color.WHITE);
+        GELServiceUi.styleButton(exit, R.drawable.gel_btn_danger_outline, Color.WHITE);
         exit.setTextSize(16f);
         exit.setOnClickListener(v -> finish());
-        root.addView(exit);
+        LinearLayout.LayoutParams exitParams = new LinearLayout.LayoutParams(-1, -2);
+        exitParams.topMargin = dp(8);
+        root.addView(exit, exitParams);
         setContentView(root);
+    }
+
+    private void showInactiveSession(boolean gr) {
+        Toast.makeText(this, gr ? "Δεν υπάρχει ενεργή σύνδεση πελάτη."
+                : "No active customer connection.", Toast.LENGTH_LONG).show();
     }
 
     private boolean isLive() {
@@ -147,13 +156,16 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
         }
     }
 
-    private void attachLogs() {
-        stopListening();
-        logsListener = FirebaseFirestore.getInstance()
-                .collection("service_sessions").document(sessionId)
+    static Query recentDiagnostics(FirebaseFirestore firestore, String sessionId) {
+        return firestore.collection("service_sessions").document(sessionId)
                 .collection("diagnostics")
                 .orderBy("createdAt", Query.Direction.ASCENDING)
-                .limitToLast(150)
+                .limitToLast(150);
+    }
+
+    private void attachLogs() {
+        stopListening();
+        logsListener = recentDiagnostics(FirebaseFirestore.getInstance(), sessionId)
                 .addSnapshotListener((snapshot, error) -> {
                     if (!isLive()) {
                         stopListening();
@@ -167,18 +179,22 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
                         return;
                     }
                     if (snapshot == null || snapshot.isEmpty()) return;
-                    StringBuilder buffer = new StringBuilder();
+                    SpannableStringBuilder buffer = new SpannableStringBuilder();
                     for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                        Object lines = doc.get("lines");
-                        if (!(lines instanceof List<?>)) continue;
-                        for (Object line : (List<?>) lines) {
-                            if (line instanceof String) {
-                                buffer.append((String) line).append('\n');
+                        Object rawLines = doc.get("lines");
+                        if (!(rawLines instanceof List<?>)) continue;
+                        List<?> lines = (List<?>) rawLines;
+                        List<?> styles = GELRemoteServiceReportLoader.diagnosticStyles(doc, lines);
+                        for (int i = 0; i < lines.size(); i++) {
+                            if (lines.get(i) instanceof String) {
+                                GELServiceUi.appendDiagnosticRow(buffer,
+                                        GELRemoteServiceReportLoader.diagnosticRow((String) lines.get(i), styles, i));
                             }
                         }
                     }
                     if (buffer.length() > 0) {
-                        logText.setText(buffer.toString());
+                        logText.setText(buffer);
+                        status.setTextColor(0xFF39FF14);
                         status.setText(AppLang.isGreek(this)
                                 ? "● Λήψη διαγνωστικών αποτελεσμάτων — μόνο ανάγνωση"
                                 : "● Receiving diagnostic results — read only");

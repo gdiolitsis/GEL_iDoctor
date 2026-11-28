@@ -19,6 +19,12 @@ function giftResult(grant, now = Date.now()) {
   const active = grant?.enabled === true && (!until || until > now);
   return {active, expiresAtMs: active ? Math.min(now + GIFT_LEASE_MS, until || Infinity) : 0};
 }
+function testerUntil(grant, now = Date.now()) {
+  if (grant?.enabled !== true) return 0;
+  if (grant.permanent === true) return Number.MAX_SAFE_INTEGER;
+  const expiry = grant.expiresAt?.toMillis?.();
+  return Number.isFinite(expiry) && expiry > now ? expiry : 0;
+}
 function subscriptionResult(purchase, now = Date.now()) {
   const states = ['SUBSCRIPTION_STATE_ACTIVE', 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
     'SUBSCRIPTION_STATE_CANCELED'];
@@ -28,4 +34,4 @@ function subscriptionResult(purchase, now = Date.now()) {
     .map(item => Date.parse(item.expiryTime) || 0));
   return {active: expiry > now, expiresAtMs: expiry > now ? Math.min(expiry, now + 86400000) : 0};
 }
-module.exports = {giftKey, verifiedGoogleEmail, giftResult, subscriptionResult};
+module.exports = {giftKey, verifiedGoogleEmail, giftResult, subscriptionResult, testerUntil};

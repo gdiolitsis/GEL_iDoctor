@@ -6,6 +6,7 @@
 
 package com.gel.cleaner;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -20,6 +21,7 @@ import android.text.InputFilter;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -29,7 +31,6 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -455,6 +456,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                 : "Scan Technician QR"
                 );
 
+        GELServiceUi.styleButton(scan, R.drawable.gel_btn_green_gold, Color.BLACK);
         scan.setOnClickListener(
                 v -> startQrScanner()
         );
@@ -580,6 +582,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                 : "Connect with Service Code"
                 );
 
+        GELServiceUi.styleButton(useCode, R.drawable.gel_btn_green_gold, Color.BLACK);
         useCode.setOnClickListener(
                 v -> validateManualCode()
         );
@@ -715,9 +718,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                 : "End Service Session"
                 );
 
-        btnEndSession.setTextColor(
-                0xFFFF5555
-        );
+        GELServiceUi.styleButton(btnEndSession, R.drawable.gel_btn_danger_outline, Color.WHITE);
 
         btnEndSession.setVisibility(
                 View.GONE
@@ -770,6 +771,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                                 : "Back"
                 );
 
+        GELServiceUi.styleButton(back, R.drawable.gel_btn_danger_outline, Color.WHITE);
         back.setOnClickListener(
                 v -> finish()
         );
@@ -1012,9 +1014,13 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
         // Explicit consent for sharing diagnostic logs; QR links never silently
         // start data transfer or enable remote screen/command control.
         consentDialogOpen = true;
-        AlertDialog consent = new AlertDialog.Builder(this)
-                .setTitle(gr ? "ΣΥΝΔΕΣΗ ΜΕ ΤΕΧΝΙΚΟ" : "CONNECT TO TECHNICIAN")
-                .setMessage(gr
+        if (inputCode != null && inputCode.hasFocus()) {
+            InputMethodManager keyboard = getSystemService(InputMethodManager.class);
+            if (keyboard != null) keyboard.hideSoftInputFromWindow(inputCode.getWindowToken(), 0);
+        }
+        Dialog consent = GELServiceUi.confirmation(this,
+                gr ? "ΣΥΝΔΕΣΗ ΜΕ ΤΕΧΝΙΚΟ" : "CONNECT TO TECHNICIAN",
+                gr
                         ? "Με τη σύνδεση, τα διαγνωστικά logs που θα παράγει το GEL iDoctor "
                           + "θα κοινοποιούνται στον συνδεδεμένο τεχνικό μέσω Firebase "
                           + "για έως 8 ώρες. Δεν επιτρέπεται απομακρυσμένος χειρισμός "
@@ -1022,11 +1028,10 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                         : "By connecting, the GEL iDoctor diagnostic logs generated during "
                           + "the session will be shared with the paired technician through "
                           + "Firebase for up to eight hours. No remote device control is "
-                          + "enabled. You may terminate the session at any time.")
-                .setNegativeButton(gr ? "ΑΚΥΡΩΣΗ" : "CANCEL", null)
-                .setPositiveButton(gr ? "ΣΥΝΔΕΣΗ & ΚΟΙΝΟΠΟΙΗΣΗ" : "CONNECT & SHARE",
-                        (dialog, which) -> beginClaimServiceSession(sessionId, serviceCode, qrExpiresAt))
-                .create();
+                          + "enabled. You may terminate the session at any time.",
+                gr ? "ΑΚΥΡΩΣΗ" : "CANCEL",
+                gr ? "ΣΥΝΔΕΣΗ & ΚΟΙΝΟΠΟΙΗΣΗ" : "CONNECT & SHARE",
+                false, () -> beginClaimServiceSession(sessionId, serviceCode, qrExpiresAt));
         consent.setOnDismissListener(d -> consentDialogOpen = false);
         consent.show();
     }
@@ -1454,35 +1459,15 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
             return;
         }
 
-        new AlertDialog.Builder(this)
-                .setTitle(
-                        gr
-                                ? "Τερματισμός Service Session"
-                                : "End Service Session"
-                )
-                .setMessage(
-                        gr
-                                ? "Θέλετε να τερματίσετε τώρα το Service Session; "
-                                + "Η απομακρυσμένη πρόσβαση του τεχνικού θα διακοπεί αμέσως."
-                                : "Do you want to end the Service Session now? "
-                                + "The technician's remote access will stop immediately."
-                )
-                .setNegativeButton(
-                        gr
-                                ? "Όχι"
-                                : "No",
-                        null
-                )
-                .setPositiveButton(
-                        gr
-                                ? "Τερματισμός"
-                                : "End Session",
-                        (dialog, which) ->
-                                requestCustomerSessionEnd(
-                                        sessionId.trim()
-                                )
-                )
-                .show();
+        GELServiceUi.confirmation(this,
+                gr ? "Τερματισμός Service Session" : "End Service Session",
+                gr ? "Θέλετε να τερματίσετε τώρα το Service Session; "
+                        + "Η απομακρυσμένη πρόσβαση του τεχνικού θα διακοπεί αμέσως."
+                   : "Do you want to end the Service Session now? "
+                        + "The technician's remote access will stop immediately.",
+                gr ? "Όχι" : "No",
+                gr ? "Τερματισμός" : "End Session",
+                true, () -> requestCustomerSessionEnd(sessionId.trim())).show();
     }
 
     private void requestCustomerSessionEnd(
@@ -2095,9 +2080,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                 15f
         );
 
-        button.setBackgroundResource(
-                R.drawable.gel_btn_outline_selector
-        );
+        GELServiceUi.styleButton(button, R.drawable.gel_btn_outline_selector, Color.WHITE);
 
         button.setPadding(
                 dp(12),

@@ -37,8 +37,10 @@ import androidx.annotation.Nullable;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.MetadataChanges;
 import com.google.firebase.functions.FirebaseFunctions;
 import com.google.firebase.Timestamp;
 import com.google.zxing.BarcodeFormat;
@@ -80,6 +82,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private static final String KEY_SESSION_CONNECTED =
             "session_connected";
     private static final String KEY_SERVICE_ENDS_AT = "service_ends_at";
+    private static final String KEY_RESULTS_OPENED_FOR = "results_opened_for";
 
     private static final String FUNCTIONS_REGION =
             "europe-west1";
@@ -132,6 +135,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private FirebaseFunctions firebaseFunctions;
     private FirebaseFirestore firebaseFirestore;
     private ListenerRegistration sessionListener;
+    private ListenerRegistration firstLabListener;
+    private boolean technicianScreenResumed;
 
     private final SecureRandom secureRandom =
             new SecureRandom();
@@ -175,13 +180,23 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     @Override protected void onResume() {
         super.onResume();
+        technicianScreenResumed = true;
         clockHandler.removeCallbacks(clockTick);
         clockHandler.post(clockTick);
+        watchForFirstLab();
     }
 
     @Override protected void onPause() {
+        technicianScreenResumed = false;
+        stopFirstLabListener();
         clockHandler.removeCallbacks(clockTick);
         super.onPause();
+    }
+
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) watchForFirstLab();
+        else stopFirstLabListener();
     }
 
     private void buildScreen() {
@@ -1042,6 +1057,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     }
 
     private void stopSessionListener() {
+        stopFirstLabListener();
         if (sessionListener != null) {
             sessionListener.remove();
             sessionListener = null;
@@ -1241,17 +1257,65 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     // REMOTE DEVICE MODE — TECHNICIAN CONTROL
     // ============================================================
+    private String activeSessionId(SharedPreferences prefs) {
+        if (!prefs.getBoolean(KEY_SESSION_CONNECTED, false)
+                || prefs.getLong(KEY_SERVICE_ENDS_AT, 0L) <= System.currentTimeMillis()) {
+            return null;
+        }
+        return prefs.getString(KEY_SESSION_ID, null);
+    }
+
     private void openReadOnlyResults() {
-        SharedPreferences p = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
-        String id = p.getString(KEY_SESSION_ID, null);
-        if (!p.getBoolean(KEY_SESSION_CONNECTED, false) || id == null ||
-                p.getLong(KEY_SERVICE_ENDS_AT, 0L) <= System.currentTimeMillis()) {
+        SharedPreferences prefs = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
+        String id = activeSessionId(prefs);
+        if (id == null) {
             Toast.makeText(this, gr ? "Δεν υπάρχει ενεργή σύνδεση πελάτη."
                     : "No live customer connection.", Toast.LENGTH_LONG).show();
             return;
         }
+        prefs.edit().putString(KEY_RESULTS_OPENED_FOR, id).apply();
+        stopFirstLabListener();
         startActivity(new Intent(this, GELReadOnlyDiagnosticsActivity.class)
                 .putExtra("sessionId", id));
+    }
+
+    private String sessionAwaitingFirstLab() {
+        if (!technicianScreenResumed || !hasWindowFocus() || isFinishing()
+                || !GELServiceSubscriptionGate.hasTechnicianAccess(this)) {
+            return null;
+        }
+        SharedPreferences prefs = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
+        String id = activeSessionId(prefs);
+        return id != null && !id.equals(prefs.getString(KEY_RESULTS_OPENED_FOR, null)) ? id : null;
+    }
+
+    private void watchForFirstLab() {
+        if (firstLabListener != null) return;
+        String id = sessionAwaitingFirstLab();
+        if (id == null) return;
+
+        firstLabListener = GELReadOnlyDiagnosticsActivity.recentDiagnostics(firebaseFirestore, id)
+                .addSnapshotListener(MetadataChanges.INCLUDE, (snapshot, error) -> {
+                    if (!id.equals(sessionAwaitingFirstLab())) return;
+                    if (error != null) {
+                        stopFirstLabListener();
+                        return;
+                    }
+                    if (snapshot == null || snapshot.getMetadata().isFromCache()) return;
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        if (GELRemoteLabLog.containsLabEntry(doc.get("lines"))) {
+                            openReadOnlyResults();
+                            return;
+                        }
+                    }
+                });
+    }
+
+    private void stopFirstLabListener() {
+        if (firstLabListener != null) {
+            firstLabListener.remove();
+            firstLabListener = null;
+        }
     }
 
     private void showRemoteControlReady() {
@@ -1275,9 +1339,11 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         btnEnterRemoteMode.setVisibility(
                 View.VISIBLE
         );
+        watchForFirstLab();
     }
 
     private void showRemoteControlWaiting() {
+        stopFirstLabListener();
 
         if (txtRemoteControlStatus == null ||
                 btnEnterRemoteMode == null) {
@@ -1661,71 +1727,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // GEL PRO
     // ============================================================
     private boolean isGelProActive() {
-        // Only paid GEL PRO or verified administrator Gift FULL ACCESS.
-        return GelProEntitlement.isPaidProActive(this) || GelAccountPro.active(this);
-    }
-
-    private void showGelProRequiredDialog() {
-        final Dialog dialog = new Dialog(
-                this,
-                android.R.style.Theme_Material_NoActionBar_TranslucentDecor
-        );
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setCancelable(true);
-        dialog.setCanceledOnTouchOutside(true);
-
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(20), dp(18), dp(20), dp(16));
-
-        GradientDrawable boxBg = new GradientDrawable();
-        boxBg.setColor(0xFF0B0B0B);
-        boxBg.setCornerRadius(dp(14));
-        boxBg.setStroke(dp(2), 0xFFFFD700);
-        box.setBackground(boxBg);
-
-        TextView title = new TextView(this);
-        title.setText("🔒 GEL PRO — Technician Service");
-        title.setTextColor(0xFFFFD700);
-        title.setTextSize(19f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(2), 0, dp(14));
-        box.addView(title);
-
-        View divider = new View(this);
-        GradientDrawable dividerBg = new GradientDrawable();
-        dividerBg.setColor(0xFFFFD700);
-        divider.setBackground(dividerBg);
-        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
-        dividerLp.setMargins(0, 0, 0, dp(16));
-        divider.setLayoutParams(dividerLp);
-        box.addView(divider);
-
-        TextView message = new TextView(this);
-        message.setText(
-                gr
-                        ? "Η λειτουργία «Απομακρυσμένη Διάγνωση & Υποστήριξη Συσκευής» είναι διαθέσιμη μόνο σε επαγγελματίες τεχνικούς με ενεργή συνδρομή GEL PRO.\n\n"
-                          + "Η συνδρομή ενεργοποιεί τα Smart Technician Service Sessions για σύνδεση και διάγνωση συσκευών πελατών."
-                        : "Remote Device Diagnostics & Support is available only to professional technicians with an active GEL PRO subscription.\n\n"
-                          + "The subscription enables Smart Technician Service Sessions for connecting and diagnosing customer devices."
-        );
-        message.setTextColor(0xFFE6E6E6);
-        message.setTextSize(15f);
-        message.setGravity(Gravity.CENTER);
-        message.setLineSpacing(0f, 1.20f);
-        message.setPadding(dp(4), 0, dp(4), dp(18));
-        box.addView(message);
-
-        Button ok = buildGelDialogButton("OK");
-        ok.setOnClickListener(v -> dialog.dismiss());
-        box.addView(ok);
-
-        dialog.setContentView(box);
-        dialog.show();
-        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
-        applyGelDialogWindow(dialog);
+        return GELServiceSubscriptionGate.hasTechnicianAccess(this);
     }
 
     // ============================================================

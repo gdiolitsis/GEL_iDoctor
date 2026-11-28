@@ -81,6 +81,29 @@ test('permanent gift restores full access without purchases or spending report c
   assert.deepEqual([...s.docs],before);
   assert.equal(s.calls.length,0);
 });
+test('a tester activated on an anonymous Firebase UID can export personalised reports without purchase access', async () => {
+  const s = setup();
+  const tester = {uid:'tester-device', token:{firebase:{sign_in_provider:'anonymous'}}};
+  const data = {reportId, attemptId, mode:'unlimited'};
+  const grantPath = 'tester_entitlements/tester-device';
+  const activeGrant = {enabled:true, expiresAt:{toMillis:() => Date.now()+60000}};
+  s.docs.set(grantPath, activeGrant);
+  for (const info of [data, {...data, reportId:another, attemptId:attempt2}]) {
+    assert.equal((await s.exports.prepareReportExport(s.req(info,tester))).allowed,true);
+  }
+  assert.equal(s.docs.has('report_accounts/tester-device'),false);
+  await assert.rejects(s.exports.getReportEntitlements(s.req({},tester)), e => e.code === 'unauthenticated');
+  await assert.rejects(s.buy('gel_custom_reports','purchase-token-123',tester), e => e.code === 'unauthenticated');
+  const stranger = {uid:'other-device', token:tester.token};
+  await assert.rejects(s.exports.prepareReportExport(s.req({...data, testerUid:tester.uid},stranger)),
+    e => e.code === 'unauthenticated');
+  for (const grant of [{enabled:false, permanent:true},{enabled:true, expiresAt:{toMillis:() => Date.now()-1}}]) {
+    s.docs.set(grantPath,grant);
+    await assert.rejects(s.exports.prepareReportExport(s.req(data,tester)),
+      e => e.code === 'unauthenticated');
+  }
+  assert.equal(s.calls.length,0);
+});
 test('gift full access uses verified non-Gmail identity and cannot be spoofed by client data',async()=>{
   const s=setup(); const email='gift-recipient@hotmail.com';
   const key=require('../pro-policy').giftKey(email);

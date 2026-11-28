@@ -25,7 +25,7 @@ test('legacy sessions without server service deadline cannot grant access', () =
   assert.throws(() => clampServiceEnd(0), /connection time/);
 });
 
-test('only server-verified paid subscriptions qualify; tester, trial and gift do not', () => {
+test('the paid entitlement reader only recognises verified subscriptions', () => {
   const now = Date.UTC(2026, 10, 25, 12, 0);
   assert.equal(paidUntil({enabled:true, permanent:true, type:'TESTER_PRO'}, now), 0);
   assert.equal(paidUntil({active:true, gift:true, expiresAt:now+1e9}, now), 0);
@@ -58,4 +58,16 @@ test('permanent verified Google Gift is eligible, revoked/expired gifts are not'
   assert.equal(giftServiceUntil({enabled:true, expiresAt:{toMillis:()=>now-1}}, now), 0);
   assert.equal(paidServiceDeadline(now, giftServiceUntil({enabled:true}, now)), now+SERVICE_MAX_MS);
   assert.equal(paidServiceDeadline(now, giftServiceUntil({enabled:true,expiresAt:{toMillis:()=>now+3000}}, now)), now+3000);
+});
+
+test('active Tester PRO qualifies and its expiry caps the session', () => {
+  const {testerUntil} = require('../pro-policy');
+  const now = Date.now();
+  assert.equal(testerUntil({enabled: true, expiresAt: {toMillis: () => now}}, now), 0);
+  assert.equal(testerUntil({enabled: false, permanent: true}, now), 0);
+  assert.equal(testerUntil({enabled: true}, now), 0);
+  const grant = {enabled: true, expiresAt: {toMillis: () => now + 3000}};
+  assert.equal(paidServiceDeadline(now, testerUntil(grant, now)), now + 3000);
+  assert.equal(paidServiceDeadline(now, testerUntil({enabled: true, permanent: true}, now)),
+    now + SERVICE_MAX_MS);
 });

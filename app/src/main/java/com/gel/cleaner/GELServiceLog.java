@@ -40,7 +40,7 @@ public class GELServiceLog {
      * Does not modify the local static service log on the technician device.
      */
     public static PdfRow detachedPdfRow(String text, String color, int start) {
-        String safeText = text == null ? "" : text.replace("\\r", " ").replace("\\n", " ").trim();
+        String safeText = sanitize(text);
         String safeColor = color != null && color.matches("#[0-9A-Fa-f]{6}")
                 ? color : null;
         int safeStart = start >= 0 && start < safeText.length() ? start : -1;

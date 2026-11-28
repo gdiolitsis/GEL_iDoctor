@@ -1,6 +1,7 @@
 package com.gel.cleaner;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -8,22 +9,27 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 
-/** Guard technician session creation with paid PRO or verified Google Gift FULL ACCESS. */
+/** Guard technician service with an eligible PRO entitlement. */
 public final class GELServiceSubscriptionGate {
     private GELServiceSubscriptionGate() {}
 
+    static boolean hasTechnicianAccess(Context context) {
+        return GelProEntitlement.isPaidProActive(context)
+                || GelAccountPro.active(context)
+                || GelProEntitlement.isTesterProActive(context);
+    }
+
     /**
-     * Technician can create sessions when Play PRO is active or a verified
-     * administrator-granted Google Gift FULL ACCESS is active. Tester and
-     * trial licenses do not authorize technician session creation.
+     * Paid PRO, verified Google Gift FULL ACCESS and active Tester PRO
+     * qualify for technician service. The customer and free-trial grants
+     * are limited to their existing features.
      *
      * If a Google gift's local short cache expired, refresh online before
      * rejecting it. The server independently checks the gift on creation.
      */
     public static void requireTechnicianAccess(Activity activity, Runnable allowed) {
         if (activity == null || activity.isFinishing() || allowed == null) return;
-        if (GelProEntitlement.isPaidProActive(activity) ||
-                GelAccountPro.active(activity)) {
+        if (hasTechnicianAccess(activity)) {
             allowed.run();
             return;
         }
@@ -33,7 +39,7 @@ public final class GELServiceSubscriptionGate {
             GelAccountPro.refresh(activity, (active, message) ->
                     activity.runOnUiThread(() -> {
                         if (activity.isFinishing() || activity.isDestroyed()) return;
-                        if (active || GelProEntitlement.isPaidProActive(activity)) {
+                        if (hasTechnicianAccess(activity)) {
                             allowed.run();
                         } else {
                             showRequired(activity);
@@ -49,15 +55,13 @@ public final class GELServiceSubscriptionGate {
         final boolean gr = AppLang.isGreek(activity);
         AlertDialog dialog = new AlertDialog.Builder(activity,
                 androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
-                .setTitle(gr ? "ΑΠΑΙΤΕΙΤΑΙ GEL PRO Ή FULL ACCESS" : "GEL PRO OR FULL ACCESS REQUIRED")
+                .setTitle(gr ? "ΑΠΑΙΤΕΙΤΑΙ ΕΝΕΡΓΗ ΠΡΟΣΒΑΣΗ PRO" : "ACTIVE PRO ACCESS REQUIRED")
                 .setMessage(gr
-                        ? "Για δημιουργία συνεδρίας τεχνικού απαιτείται ενεργή συνδρομή GEL PRO "
-                          + "ή εγκεκριμένη δωρεάν FULL ACCESS μέσω Google. Ο πελάτης συνδέεται δωρεάν. "
-                          + "Οι κωδικοί Tester και η δοκιμαστική πρόσβαση δεν αρκούν. "
-                          + "Μπορείτε να ελέγξετε το FULL ACCESS ή να επαναφέρετε τη συνδρομή σας."
-                        : "Creating a customer Service Session requires a paid GEL PRO subscription for the technician. The customer joins for free with QR or code. "
-                          + "Tester, Gift and Trial access cannot create technician sessions. "
-                          + "You can subscribe or restore your existing Play purchase.")
+                        ? "Για τη συνεδρία τεχνικού απαιτείται ενεργή συνδρομή GEL PRO "
+                          + "ή εγκεκριμένο Google Gift FULL ACCESS ή ενεργό Tester PRO. "
+                          + "Ο πελάτης συνδέεται δωρεάν με QR ή κωδικό."
+                        : "Technician Service Sessions require active GEL PRO, approved Google Gift FULL ACCESS, "
+                          + "or active Tester PRO. The customer joins for free with QR or code.")
                 .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
                 .setPositiveButton(gr ? "Έλεγχος FULL ACCESS / PRO" : "Check FULL ACCESS / PRO",
                         (d, w) -> activity.startActivity(

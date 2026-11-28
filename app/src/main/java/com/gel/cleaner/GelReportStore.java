@@ -17,6 +17,16 @@ final class GelReportStore {
         FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
         return u != null && !u.isAnonymous() && u.isEmailVerified() ? u.getUid() : "";
     }
+    private static String firebaseUid() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        return user == null ? "" : user.getUid();
+    }
+    static String exportUid(Context context, boolean unlimited) {
+        return unlimited && GelProEntitlement.isTesterProActive(context) ? firebaseUid() : uid();
+    }
+    static boolean hasIncludedBranding(Context context) {
+        return GelAccountPro.active(context) || GelProEntitlement.isTesterProActive(context);
+    }
     static String accountHash() {
         try {
             byte[] bytes = java.security.MessageDigest.getInstance("SHA-256")
@@ -28,13 +38,22 @@ final class GelReportStore {
     }
     static SharedPreferences prefs(Context c) { return c.getSharedPreferences("GEL_REPORT_SERVER_" + uid(), 0); }
     static int credits(Context c) { return uid().isEmpty() ? 0 : prefs(c).getInt("credits", 0); }
-    static boolean unlimited(Context c) { return !uid().isEmpty() && (prefs(c).getBoolean("unlimited", false) || GelTrialAccess.active(c)); }
+    static boolean unlimited(Context c) {
+        return hasIncludedBranding(c)
+                || (!uid().isEmpty() && (prefs(c).getBoolean("unlimited", false) || GelTrialAccess.active(c)));
+    }
     private static void call(Context c, String name, Map<String,Object> args, Callback callback) {
+        call(c, name, args, false, callback);
+    }
+    private static void call(Context c, String name, Map<String,Object> args,
+                             boolean testerExport, Callback callback) {
         args.put("deviceId", GelTrialAccess.deviceId(c));
-        final String owner = uid();
+        final String owner = testerExport ? firebaseUid() : uid();
         if (owner.isEmpty()) { callback.done(false,"UNAUTHENTICATED","Sign in with Google to restore report purchases."); return; }
         functions().getHttpsCallable(name).call(args).addOnCompleteListener(task -> {
-            if (!owner.equals(uid())) { callback.done(false,"UNAUTHENTICATED","Account changed. Please retry."); return; }
+            if (!owner.equals(testerExport ? firebaseUid() : uid())) {
+                callback.done(false,"UNAUTHENTICATED","Account changed. Please retry."); return;
+            }
             if (!task.isSuccessful() || task.getResult() == null || !(task.getResult().getData() instanceof Map)) {
                 Exception e = task.getException();
                 String code = e instanceof FirebaseFunctionsException
@@ -42,7 +61,11 @@ final class GelReportStore {
                 callback.done(false,code,"Report verification unavailable (" + code + "). Please retry Restore."); return;
             }
             Map<?,?> data = (Map<?,?>) task.getResult().getData();
-            if (data.get("credits") instanceof Number) prefs(c).edit()
+            if (testerExport && !Boolean.TRUE.equals(data.get("allowed"))) {
+                callback.done(false,"PERMISSION_DENIED","Tester PRO report export was not authorised.");
+                return;
+            }
+            if (!testerExport && data.get("credits") instanceof Number) prefs(c).edit()
                     .putInt("credits", Math.max(0,((Number)data.get("credits")).intValue()))
                     .putBoolean("unlimited", Boolean.TRUE.equals(data.get("unlimited"))).apply();
             callback.done(true,"", "");
@@ -58,7 +81,8 @@ final class GelReportStore {
     }
     static void prepare(Context c, String report, String attempt, boolean unlimited, Callback callback) {
         Map<String,Object> args = args(report,attempt,true); args.put("mode",unlimited ? "unlimited" : "single");
-        call(c,"prepareReportExport",args,callback);
+        boolean testerExport = unlimited && GelProEntitlement.isTesterProActive(c);
+        call(c,"prepareReportExport",args,testerExport,callback);
     }
     private static Map<String,Object> args(String report, String attempt, boolean success) {
         Map<String,Object> args = new HashMap<>(); args.put("reportId",report); args.put("attemptId",attempt); args.put("success",success); return args;

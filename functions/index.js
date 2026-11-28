@@ -36,24 +36,23 @@ const COLLECTION = "service_sessions";
 const PAIRING_WINDOW_MS = 2 * 60 * 60 * 1000;
 const {SERVICE_MAX_MS, REMOTE_CONTROL_ENABLED, serviceActive,
   serviceUntilMs, paidUntil, giftServiceUntil, paidServiceDeadline} = require('./service-session-policy');
-const {giftKey, verifiedGoogleEmail} = require('./pro-policy');
+const {giftKey, verifiedGoogleEmail, testerUntil} = require('./pro-policy');
 
-// Only a paid GEL PRO subscriber OR a server-approved Google Gift FULL
-// ACCESS holder may CREATE technician sessions. Gift identity comes only
-// from the verified Firebase Google Auth token, never from client input.
+// Technician access comes from a server-verified Play, Gift, or Tester grant.
 async function technicianServiceGrant(auth) {
   const uid = auth?.uid;
   if (!uid) return {until: 0, giftHash: null};
   const email = verifiedGoogleEmail(auth);
   const giftHash = email ? giftKey(email) : null;
-  const [paid, gift] = await Promise.all([
+  const [paid, tester, gift] = await Promise.all([
     db.collection('pro_paid_accounts').doc(uid).get(),
+    db.collection(TESTER_ENTITLEMENT_COLLECTION).doc(uid).get(),
     giftHash ? db.collection('pro_gift_accounts').doc(giftHash).get() : null
   ]);
   const paidExpiry = paidUntil(paid.data());
   const giftExpiry = gift ? giftServiceUntil(gift.data()) : 0;
   return {
-    until: Math.max(paidExpiry, giftExpiry),
+    until: Math.max(paidExpiry, giftExpiry, testerUntil(tester.data())),
     giftHash: giftExpiry ? giftHash : null,
   };
 }
@@ -231,7 +230,7 @@ exports.createServiceSession =
       const serviceGrant = await technicianServiceGrant(request.auth);
       if (!serviceGrant.until) {
         throw new HttpsError('permission-denied',
-          'An active paid GEL PRO subscription or verified Google Gift FULL ACCESS is required.');
+          'Active GEL PRO, Google Gift FULL ACCESS, or Tester PRO is required.');
       }
 
       const createdAtMs =
@@ -301,8 +300,8 @@ exports.claimServiceSession =
   onCall(
     async (request) => {
       // Joining a technician-issued QR/service code is free to the customer.
-      // Firebase identity, technician subscription, code and deadlines remain
-      // server-verified. Only createServiceSession requires paid GEL PRO.
+      // Firebase identity, technician entitlement, code and deadlines remain
+      // server-verified. A customer does not need a PRO entitlement to join.
       const customerUid =
         requireAuth(request);
 
@@ -381,8 +380,9 @@ exports.claimServiceSession =
             const giftHash = typeof session.technicianGiftKey === 'string' &&
                 /^[a-f0-9]{64}$/.test(session.technicianGiftKey)
               ? session.technicianGiftKey : null;
-            const [techPaidSnap, techGiftSnap] = await Promise.all([
+            const [techPaidSnap, techTesterSnap, techGiftSnap] = await Promise.all([
               tx.get(db.collection('pro_paid_accounts').doc(session.technicianUid)),
+              tx.get(db.collection(TESTER_ENTITLEMENT_COLLECTION).doc(session.technicianUid)),
               giftHash
                 ? tx.get(db.collection('pro_gift_accounts').doc(giftHash))
                 : Promise.resolve(null),
@@ -390,10 +390,10 @@ exports.claimServiceSession =
             const techPaidUntil = paidUntil(techPaidSnap.data());
             const techGiftUntil = techGiftSnap
               ? giftServiceUntil(techGiftSnap.data()) : 0;
-            const techEntitlementUntil = Math.max(techPaidUntil, techGiftUntil);
+            const techEntitlementUntil = Math.max(techPaidUntil, techGiftUntil, testerUntil(techTesterSnap.data()));
             if (!techEntitlementUntil) {
               throw new HttpsError('permission-denied',
-                'The technician requires active paid GEL PRO or verified Gift FULL ACCESS.');
+                'The technician requires active GEL PRO, Google Gift FULL ACCESS, or Tester PRO.');
             }
 
             if (
@@ -482,12 +482,12 @@ exports.claimServiceSession =
 
             const connectedAtMs = Date.now();
             // Eight-hour maximum, or earlier if the technician's
-            // paid/Gift entitlement expires. Customer is never billed.
+            // entitlement expires. Customer is never billed.
             const serviceEndsAtMs = paidServiceDeadline(
               connectedAtMs, techEntitlementUntil
             );
             if (serviceEndsAtMs <= connectedAtMs) {
-              throw new HttpsError('permission-denied', 'GEL PRO subscription expired.');
+              throw new HttpsError('permission-denied', 'The technician PRO entitlement expired.');
             }
             tx.update(
               ref,
@@ -2557,44 +2557,14 @@ function timestampToMillis(value) {
 }
 
 function buildTesterEntitlementResult(data) {
-  const enabled =
-    data &&
-    data.enabled === true;
-
-  const permanent =
-    data &&
-    data.permanent === true;
-
-  const expiresAtMs =
-    timestampToMillis(
-      data
-        ? data.expiresAt
-        : null
-    );
-
-  const active =
-    enabled &&
-    (
-      permanent ||
-      (
-        expiresAtMs > 0 &&
-        expiresAtMs > Date.now()
-      )
-    );
-
+  const until = testerUntil(data);
+  const active = until > 0;
+  const permanent = active && data.permanent === true;
   return {
     active,
-    permanent:
-      active && permanent,
-    expiresAtMs:
-      active && !permanent
-        ? expiresAtMs
-        : 0,
-    type:
-      data &&
-      typeof data.type === "string"
-        ? data.type
-        : "TESTER_PRO",
+    permanent,
+    expiresAtMs: active && !permanent ? until : 0,
+    type: typeof data?.type === "string" ? data.type : "TESTER_PRO",
   };
 }
 

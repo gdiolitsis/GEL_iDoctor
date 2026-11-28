@@ -53,7 +53,7 @@ public final class GELRemoteServiceReportLoader {
 
     public static boolean sessionValid(Context context, String sessionId) {
         if (context == null || sessionId == null || sessionId.trim().isEmpty()
-                || !GelProEntitlement.isPaidProActive(context)) return false;
+                || !GELServiceSubscriptionGate.hasTechnicianAccess(context)) return false;
         SharedPreferences p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         return sessionId.equals(p.getString("session_id", ""))
                 && p.getBoolean("session_connected", false)
@@ -62,7 +62,7 @@ public final class GELRemoteServiceReportLoader {
 
     public static void fetch(Context context, String sessionId, Callback callback) {
         if (!sessionValid(context, sessionId)) {
-            callback.completed(null, "The paid technician Service Session is no longer active.");
+            callback.completed(null, "The technician Service Session is no longer active.");
             return;
         }
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -137,6 +137,26 @@ public final class GELRemoteServiceReportLoader {
         });
     }
 
+    static List<?> diagnosticStyles(DocumentSnapshot doc, List<?> lines) {
+        Object raw = doc.get("styles");
+        if (raw instanceof List<?> && ((List<?>) raw).size() == lines.size()) {
+            return (List<?>) raw;
+        }
+        return Collections.emptyList();
+    }
+
+    static GELServiceLog.PdfRow diagnosticRow(String line, List<?> styles, int index) {
+        if (index < styles.size() && styles.get(index) instanceof Map<?, ?>) {
+            Map<?, ?> style = (Map<?, ?>) styles.get(index);
+            Object color = style.get("valueColor");
+            Object offset = style.get("valueStart");
+            return GELServiceLog.detachedPdfRow(line,
+                    color instanceof String ? (String) color : null,
+                    offset instanceof Number ? ((Number) offset).intValue() : -1);
+        }
+        return GELServiceLog.detachedPdfRow(line, null, -1);
+    }
+
     private static final class Accumulator {
         final String sessionId;
         final StringBuilder text = new StringBuilder();
@@ -152,17 +172,19 @@ public final class GELRemoteServiceReportLoader {
         }
 
         private void addRow(String line, String color, int valueStart) {
-            rows.add(GELServiceLog.detachedPdfRow(line, color, valueStart));
-            text.append(line).append('\n');
+            addRow(GELServiceLog.detachedPdfRow(line, color, valueStart));
         }
 
-        @SuppressWarnings("unchecked")
+        private void addRow(GELServiceLog.PdfRow row) {
+            rows.add(row);
+            text.append(row.text).append('\n');
+        }
+
         boolean append(@NonNull DocumentSnapshot doc) {
             Object rawLines = doc.get("lines");
             if (!(rawLines instanceof List<?>)) return false;
             List<?> lines = (List<?>) rawLines;
-            Object rawStyles = doc.get("styles");
-            List<?> styles = rawStyles instanceof List<?> ? (List<?>) rawStyles : null;
+            List<?> styles = diagnosticStyles(doc, lines);
             for (int k = 0; k < lines.size(); k++) {
                 Object raw = lines.get(k);
                 if (!(raw instanceof String)) return false;
@@ -170,19 +192,7 @@ public final class GELRemoteServiceReportLoader {
                 if (line.isEmpty()) continue;
                 if (text.length() + line.length() > MAX_CHARS ||
                         logLines + 1 > MAX_LINES) return false;
-                String color = null;
-                int valueStart = -1;
-                if (styles != null && styles.size() == lines.size() &&
-                        styles.get(k) instanceof Map<?, ?>) {
-                    Map<?, ?> style = (Map<?, ?>) styles.get(k);
-                    Object c = style.get("valueColor");
-                    Object offset = style.get("valueStart");
-                    if (c instanceof String && ((String) c).matches("#[0-9A-Fa-f]{6}")) {
-                        color = (String) c;
-                    }
-                    if (offset instanceof Number) valueStart = ((Number) offset).intValue();
-                }
-                addRow(line, color, valueStart);
+                addRow(diagnosticRow(line, styles, k));
                 logLines++;
             }
             batches++;

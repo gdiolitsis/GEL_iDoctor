@@ -3,6 +3,7 @@
 
 package com.gel.cleaner;
 import android.app.AlertDialog;
+import android.content.ClipData;
 import android.content.ContentValues;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -38,6 +39,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
@@ -76,6 +79,12 @@ public class ServiceReportActivity extends GELAutoActivityHook {
             new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable htmlPrintTimeout;
     private boolean htmlPrintRequested;
+    private static final String STATE_OFFER_HTML_SHARE = "gel_offer_html_share";
+    private boolean offerHtmlShareOnReturn;
+    private final ActivityResultLauncher<String[]> savedReportPdfPicker =
+            registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri != null) sharePdf(uri);
+            });
     private Runnable reportAuthorisationTimeout;
 
     // STEP 2 — billing/report entitlement bridge.
@@ -163,6 +172,8 @@ public class ServiceReportActivity extends GELAutoActivityHook {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        offerHtmlShareOnReturn = savedInstanceState != null
+                && savedInstanceState.getBoolean(STATE_OFFER_HTML_SHARE);
 
         remoteSessionId = getIntent() != null
                 ? getIntent().getStringExtra(GELRemoteServiceReportLoader.EXTRA_SESSION_ID)
@@ -261,6 +272,7 @@ public class ServiceReportActivity extends GELAutoActivityHook {
 
         LinearLayout line = new LinearLayout(this);
         line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setBaselineAligned(false);
 
 btnTxt = new GelButton(this);
 btnHtml = new GelButton(this);
@@ -273,7 +285,7 @@ if (AppLang.isGreek(this)) {
     );
     btnHtml.setText(
             (isGelProActive() ? "" : "🔒 ")
-                    + "PRO  HTML PDF (Αποθήκευση)"
+                    + "PRO  HTML PDF (Αποθήκευση & Κοινοποίηση)"
     );
 } else {
     btnTxt.setText(
@@ -282,7 +294,7 @@ if (AppLang.isGreek(this)) {
     );
     btnHtml.setText(
             (isGelProActive() ? "" : "🔒 ")
-                    + "PRO  HTML PDF (Save)"
+                    + "PRO  HTML PDF (Save & Share)"
     );
 }
 
@@ -298,7 +310,7 @@ btnTxt.setMinimumHeight(dp(72));
 
 LinearLayout.LayoutParams lpTxt =
         new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                LinearLayout.LayoutParams.MATCH_PARENT, 1f);
 lpTxt.setMargins(0, 0, dp(8), 0);
 btnTxt.setLayoutParams(lpTxt);
 btnTxt.setPadding(dp(12), dp(12), dp(12), dp(12));
@@ -315,7 +327,7 @@ btnHtml.setMinimumHeight(dp(72));
 
 LinearLayout.LayoutParams lpHtml =
         new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                LinearLayout.LayoutParams.MATCH_PARENT, 1f);
 lpHtml.setMargins(dp(8), 0, 0, 0);
 btnHtml.setLayoutParams(lpHtml);
 btnHtml.setPadding(dp(12), dp(12), dp(12), dp(12));
@@ -352,15 +364,9 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                     ? "ΑΝΑΝΕΩΣΗ ΔΙΑΓΝΩΣΤΙΚΩΝ ΠΕΛΑΤΗ"
                     : "REFRESH CUSTOMER DIAGNOSTICS");
             reloadCustomer.setAllCaps(false);
-            reloadCustomer.setOnClickListener(v -> {
-                if (!GELRemoteServiceReportLoader.sessionValid(this, remoteSessionId)) {
-                    Toast.makeText(this, AppLang.isGreek(this)
-                            ? "Η συνεδρία πελάτη έληξε."
-                            : "Customer session expired.", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                loadCustomerReport();
-            });
+            GELServiceUi.styleButton(reloadCustomer, R.drawable.gel_btn_green_gold, Color.BLACK);
+            reloadCustomer.setOnClickListener(v ->
+                    GELServiceSubscriptionGate.requireTechnicianAccess(this, this::loadCustomerReport));
             root.addView(reloadCustomer);
         }
 
@@ -376,6 +382,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     // STEP 2 — REPORT BILLING / ENTITLEMENT GATE
     // ============================================================
     private boolean pendingHtmlExport = false;
+    private boolean pendingBlankFormExport;
     private boolean pendingProReportExport = false;
 
     private int reportBrandingChoice = 0; // 0 GEL, 1 single report, 2 unlimited
@@ -385,6 +392,11 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     private boolean reportServerAuthorised;
 
     private void beginReportExport(boolean html) {
+        if (remoteSessionId != null && remoteReport != null
+                && !GELServiceSubscriptionGate.hasTechnicianAccess(this)) {
+            GELServiceSubscriptionGate.requireTechnicianAccess(this, () -> beginReportExport(html));
+            return;
+        }
         if (!remoteReportAllowed()) {
             Toast.makeText(this, AppLang.isGreek(this)
                     ? "Η αναφορά πελάτη δεν φορτώθηκε ή η συνεδρία έληξε."
@@ -393,10 +405,19 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
             return;
         }
         pendingHtmlExport = html;
+        pendingBlankFormExport = false;
+        if (remoteSessionId == null && reportSourceEmpty()) {
+            showEmptyReportOptionsDialog(true);
+            return;
+        }
         showPersonalisedReportPurchaseDialog();
     }
 
     private void prepareReportExport(int choice) {
+        if (remoteSessionId != null && !GELServiceSubscriptionGate.hasTechnicianAccess(this)) {
+            GELServiceSubscriptionGate.requireTechnicianAccess(this, () -> prepareReportExport(choice));
+            return;
+        }
         reportBrandingChoice = choice;
         reportServerAuthorised = false;
         if (billingManager == null || !billingManager.isGelProActive()) {
@@ -406,7 +427,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         useProfessionalBrandingForCurrentExport = choice != 0;
         useSingleReportCreditForCurrentExport = choice == 1;
         if (choice == 0) { continuePreparedExport(); return; }
-        if (GelReportStore.uid().isEmpty()) {
+        String reportOwner = GelReportStore.exportUid(this, choice == 2);
+        if (reportOwner.isEmpty()) {
             Toast.makeText(this, AppLang.isGreek(this)
                     ? "Συνδεθείτε με Google για αγορά και επαναφορά εξατομικευμένων αναφορών."
                     : "Sign in with Google for personalised report purchases and recovery.", Toast.LENGTH_LONG).show();
@@ -414,9 +436,10 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         }
         singleReportIdentity = reportIdentity();
         exportAttempt = java.util.UUID.randomUUID().toString();
-        exportOwner = GelReportStore.uid();
+        exportOwner = reportOwner;
         final String identity = singleReportIdentity;
         final String attempt = exportAttempt;
+        final boolean includedBranding = GelReportStore.hasIncludedBranding(this);
         lockExportUI(true);
 
         // Server verification is separate from WebView loading. It also needs
@@ -449,7 +472,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                             if (choice == 1 && "RESOURCE_EXHAUSTED".equals(code)) {
                                 pendingSingleReportExport = true;
                                 billingManager.launchSingleReportPurchase(this);
-                            } else if (choice == 2 && "PERMISSION_DENIED".equals(code)) {
+                            } else if (choice == 2 && !includedBranding && "PERMISSION_DENIED".equals(code)) {
                                 billingManager.launchCustomReportsPurchase(this);
                             } else {
                                 Toast.makeText(this, message, Toast.LENGTH_LONG).show();
@@ -469,8 +492,13 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     private void continuePreparedExport() {
+        if (pendingBlankFormExport) {
+            pendingBlankFormExport = false;
+            exportBlankServiceFormPdf();
+            return;
+        }
         if (!remoteReportAllowed() || reportSourceEmpty()) {
-            if (remoteSessionId == null) showEmptyReportOptionsDialog();
+            if (remoteSessionId == null) showEmptyReportOptionsDialog(false);
             else Toast.makeText(this, AppLang.isGreek(this)
                     ? "Δεν υπάρχουν διαθέσιμα διαγνωστικά από τον πελάτη."
                     : "No customer diagnostics available.", Toast.LENGTH_LONG).show();
@@ -512,16 +540,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                         ? billingManager.isGelProActive()
                         : isGelProActive();
 
-        final boolean unlimitedPersonalisation =
-                gelProActive
-                        && billingManager != null
-                        && billingManager.isCustomReportsActive();
-
-        final boolean singleReportCredit =
-                billingManager != null
-                        && billingManager.hasSingleReportCredit();
-
-        // Re-check the paid export entitlement immediately before export.
+        // Re-check PRO access immediately before export.
         if (!gelProActive) {
             finishSingleReport(false);
             useSingleReportCreditForCurrentExport = false;
@@ -531,7 +550,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         }
 
         if (reportBrandingChoice != 0 && (!reportServerAuthorised
-                || !exportOwner.equals(GelReportStore.uid()) || !singleReportIdentity.equals(reportIdentity()))) {
+                || !exportOwner.equals(GelReportStore.exportUid(this, reportBrandingChoice == 2)) || !singleReportIdentity.equals(reportIdentity()))) {
             finishSingleReport(false);
             prepareReportExport(reportBrandingChoice); return;
         }
@@ -593,8 +612,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         msg.setText(!proActive
                 ? (gr ? "Η εξαγωγή απαιτεί ενεργό GEL PRO. Επιλέξτε έναν μήνα με ή χωρίς αυτόματη ανανέωση, με 4,99€. Οι αναφορές με λογότυπο GEL περιλαμβάνονται. Η εξατομίκευση αγοράζεται χωριστά μετά την ενεργοποίηση PRO."
                       : "Export requires active GEL PRO. Choose one month with or without auto-renewal for €4.99. Reports with the GEL logo are included. Personalisation is purchased separately after PRO activation.")
-                : (gr ? "Οι αναφορές με λογότυπο GEL περιλαμβάνονται στο ενεργό PRO. Η εξατομίκευση απαιτεί ενεργό PRO. Η επανεξαγωγή της ίδιας αναφοράς δεν καταναλώνει επιπλέον credit."
-                      : "Reports with the GEL logo are included in active PRO. Personalisation requires active PRO. Re-exporting the same report uses no additional credit."));
+                : (gr ? "Οι αναφορές με λογότυπο GEL περιλαμβάνονται στο ενεργό PRO. Η εξατομίκευση περιλαμβάνεται στο Gift FULL ACCESS και στο Tester PRO. Η επανεξαγωγή της ίδιας αναφοράς δεν καταναλώνει επιπλέον credit."
+                      : "Reports with the GEL logo are included in active PRO. Personalisation is included with Gift FULL ACCESS and Tester PRO. Re-exporting the same report uses no additional credit."));
         msg.setTextColor(0xFF00FF9C);
         msg.setTextSize(14f);
         msg.setPadding(0, dp(14), 0, dp(8));
@@ -647,9 +666,9 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     // ============================================================
-    // EMPTY REPORT FLOW — offer a printable blank two-page form
+    // EMPTY REPORT FLOW
     // ============================================================
-    private void showEmptyReportOptionsDialog() {
+    private void showEmptyReportOptionsDialog(boolean needsBlankFormSetup) {
 
         final boolean gr = AppLang.isGreek(this);
 
@@ -674,14 +693,9 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         TextView message = new TextView(this);
         message.setText(gr
-                ? "Δεν έχει εκτελεστεί ακόμη κάποιο εργαστήριο, επομένως δεν υπάρχουν "
-                  + "διαγνωστικά αποτελέσματα για εξαγωγή.\n\n"
-                  + "Θέλεις να δημιουργήσεις μια κενή φόρμα Service Report με την πρώτη "
-                  + "και την τελευταία σελίδα, ώστε να τη συμπληρώσεις χειρόγραφα;"
-                : "No diagnostic lab has been run yet, so there are no diagnostic results "
-                  + "to export.\n\n"
-                  + "Would you like to create a blank Service Report containing the first "
-                  + "and final pages, ready to be completed by hand?");
+                ? "Μπορείτε να δημιουργήσετε μια κενή φόρμα για χειρόγραφη συμπλήρωση "
+                  + "ή να κοινοποιήσετε ένα αποθηκευμένο PDF."
+                : "Create a blank form to fill in by hand, or share a saved PDF.");
         message.setTextColor(0xFF00FF9C);
         message.setTextSize(14f);
         message.setLineSpacing(0f, 1.18f);
@@ -696,6 +710,12 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                 0xFF0F8A3B
         );
 
+        Button shareSaved = gelButton(
+                this,
+                gr ? "ΚΟΙΝΟΠΟΙΗΣΗ ΑΠΟΘΗΚΕΥΜΕΝΟΥ PDF" : "SHARE SAVED PDF",
+                0xFF0F8A3B
+        );
+
         Button cancel = gelButton(
                 this,
                 gr ? "ΑΚΥΡΟ" : "CANCEL",
@@ -703,9 +723,12 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         );
 
         root.addView(createBlank);
+        root.addView(shareSaved);
         root.addView(cancel);
 
-        builder.setView(root);
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(root);
+        builder.setView(scroll);
         final AlertDialog dialog = builder.create();
 
         cancel.setOnClickListener(v -> { finishSingleReport(false); dialog.dismiss(); });
@@ -713,7 +736,17 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         createBlank.setOnClickListener(v -> {
             dialog.dismiss();
-            exportBlankServiceFormPdf();
+            if (needsBlankFormSetup) {
+                pendingBlankFormExport = true;
+                showPersonalisedReportPurchaseDialog();
+            } else {
+                exportBlankServiceFormPdf();
+            }
+        });
+        shareSaved.setOnClickListener(v -> {
+            finishSingleReport(false);
+            dialog.dismiss();
+            pickSavedReportPdf();
         });
 
         dialog.show();
@@ -946,6 +979,37 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         updatePreview();
         if (billingManager != null) billingManager.refreshPurchases();
         if (proLogoPreview != null) refreshProfessionalLogoPreview();
+        if (offerHtmlShareOnReturn && !isFinishing()) {
+            offerHtmlShareOnReturn = false;
+            showShareSavedHtmlPdf();
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(STATE_OFFER_HTML_SHARE, offerHtmlShareOnReturn);
+    }
+
+    private void showShareSavedHtmlPdf() {
+        boolean gr = AppLang.isGreek(this);
+        GELServiceUi.confirmation(this,
+                gr ? "Κοινοποίηση HTML PDF" : "Share HTML PDF",
+                gr ? "Αν αποθηκεύσατε την αναφορά ως PDF, επιλέξτε το αρχείο για κοινοποίηση."
+                   : "If you saved the report as a PDF, select the saved file to share it.",
+                gr ? "Όχι τώρα" : "Not now",
+                gr ? "Επιλογή PDF" : "Select PDF",
+                false, this::pickSavedReportPdf).show();
+    }
+
+    private void pickSavedReportPdf() {
+        try {
+            savedReportPdfPicker.launch(new String[]{"application/pdf"});
+        } catch (android.content.ActivityNotFoundException e) {
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Δεν βρέθηκε εφαρμογή επιλογής αρχείων."
+                    : "No file picker is available.", Toast.LENGTH_LONG).show();
+        }
     }
 
 
@@ -1539,48 +1603,15 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         title.setPadding(0, 0, 0, dp(12));
         card.addView(title);
 
-        TextView firstLabel = previewText(
-                gr ? "Πρώτη σελίδα" : "First page",
-                12f,
-                Color.WHITE,
-                true
+        ImageView reportPreview = new ImageView(this);
+        reportPreview.setImageResource(R.drawable.gel_report_preview);
+        reportPreview.setAdjustViewBounds(true);
+        reportPreview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        reportPreview.setContentDescription(
+                gr ? "Δείγμα επαγγελματικής αναφοράς GEL Service Report"
+                   : "Sample professional GEL Service Report"
         );
-        firstLabel.setGravity(Gravity.CENTER);
-        firstLabel.setPadding(0, 0, 0, dp(6));
-        card.addView(firstLabel);
-
-        ImageView firstPage = new ImageView(this);
-        firstPage.setImageResource(R.drawable.gel_report_preview_first);
-        firstPage.setAdjustViewBounds(true);
-        firstPage.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        firstPage.setContentDescription(
-                gr ? "Προεπισκόπηση πρώτης σελίδας GEL Service Report"
-                   : "GEL Service Report first page preview"
-        );
-        card.addView(firstPage, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
-
-        TextView finalLabel = previewText(
-                gr ? "Τελική σελίδα" : "Final page",
-                12f,
-                Color.WHITE,
-                true
-        );
-        finalLabel.setGravity(Gravity.CENTER);
-        finalLabel.setPadding(0, dp(14), 0, dp(6));
-        card.addView(finalLabel);
-
-        ImageView finalPage = new ImageView(this);
-        finalPage.setImageResource(R.drawable.gel_report_preview_final);
-        finalPage.setAdjustViewBounds(true);
-        finalPage.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        finalPage.setContentDescription(
-                gr ? "Προεπισκόπηση τελικής σελίδας GEL Service Report"
-                   : "GEL Service Report final page preview"
-        );
-        card.addView(finalPage, new LinearLayout.LayoutParams(
+        card.addView(reportPreview, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
@@ -1956,7 +1987,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         if (!remoteReportAllowed() || reportSourceEmpty()) {
             runOnUiThread(() -> {
-                if (remoteSessionId == null) showEmptyReportOptionsDialog();
+                if (remoteSessionId == null) showEmptyReportOptionsDialog(false);
                 else Toast.makeText(this, AppLang.isGreek(this)
                         ? "Δεν υπάρχουν διαθέσιμα διαγνωστικά πελάτη."
                         : "No customer diagnostic data available.",
@@ -2307,20 +2338,24 @@ private void exportHtmlPdf(String report) {
 
                     android.print.PrintDocumentAdapter adapter =
                             view.createPrintDocumentAdapter("GEL_Service_Report");
-                    android.print.PrintAttributes attrs =
+                    android.print.PrintAttributes.Builder printAttributes =
                             new android.print.PrintAttributes.Builder()
                                     .setMediaSize(android.print.PrintAttributes.MediaSize.ISO_A4)
                                     .setResolution(new android.print.PrintAttributes.Resolution(
                                             "pdf", "pdf", 300, 300))
-                                    .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
-                                    .build();
+                                    .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS);
+                    if (remoteSessionId != null) {
+                        printAttributes.setColorMode(android.print.PrintAttributes.COLOR_MODE_COLOR);
+                    }
+                    android.print.PrintAttributes attrs = printAttributes.build();
 
                     android.print.PrintJob job =
                             pm.print("GEL_Service_Report", adapter, attrs);
                     if (job == null) throw new IllegalStateException("Print job not created");
 
-                    // This confirms only that the system print UI was requested.
-                    // Saving/cancelling is controlled by the user in Android.
+                    // The print activity keeps the saved file URI. On return,
+                    // let the user select the PDF rather than assuming it was saved.
+                    offerHtmlShareOnReturn = true;
                     lockExportUI(false);
                     Toast.makeText(ServiceReportActivity.this,
                             gr ? "Επιλέξτε «Αποθήκευση ως PDF» στο παράθυρο εκτύπωσης."
@@ -2751,7 +2786,15 @@ private String buildHtmlReport(String report) {
             return;
         }
 
-        txtPreview.setText(data.replaceAll("\\n{3,}", "\n\n"));
+        if (remoteReport != null) {
+            android.text.SpannableStringBuilder preview = new android.text.SpannableStringBuilder();
+            for (GELServiceLog.PdfRow row : remoteReport.rows) {
+                GELServiceUi.appendDiagnosticRow(preview, row);
+            }
+            txtPreview.setText(preview);
+        } else {
+            txtPreview.setText(data.replaceAll("\\n{3,}", "\n\n"));
+        }
     }
 
 
@@ -2767,7 +2810,7 @@ private String buildHtmlReport(String report) {
         int y = startY;
 
         // Page-1 identity.
-        // Saved professional branding is a separate paid entitlement.
+        // Render the professional branding authorized for this export.
         if (useProfessionalBrandingForCurrentExport) {
             Bitmap professionalLogo = getProfessionalLogoBitmap();
             if (professionalLogo != null) {
@@ -3066,7 +3109,7 @@ private String buildHtmlReport(String report) {
                 exportProgress.setVisibility(View.GONE);
             }
 
-            showEmptyReportOptionsDialog();
+            showEmptyReportOptionsDialog(false);
             return null;
         }
 
@@ -3174,9 +3217,8 @@ private void sharePdf(Uri uri) {
             uri
     );
 
-    intent.addFlags(
-            Intent.FLAG_GRANT_READ_URI_PERMISSION
-    );
+    intent.setClipData(ClipData.newRawUri("GEL Service Report", uri));
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
     try {
 
