@@ -2312,13 +2312,16 @@ private void exportHtmlPdf(String report) {
 
                     android.print.PrintDocumentAdapter adapter =
                             view.createPrintDocumentAdapter("GEL_Service_Report");
-                    android.print.PrintAttributes attrs =
+                    android.print.PrintAttributes.Builder printAttributes =
                             new android.print.PrintAttributes.Builder()
                                     .setMediaSize(android.print.PrintAttributes.MediaSize.ISO_A4)
                                     .setResolution(new android.print.PrintAttributes.Resolution(
                                             "pdf", "pdf", 300, 300))
-                                    .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
-                                    .build();
+                                    .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS);
+                    if (remoteSessionId != null) {
+                        printAttributes.setColorMode(android.print.PrintAttributes.COLOR_MODE_COLOR);
+                    }
+                    android.print.PrintAttributes attrs = printAttributes.build();
 
                     android.print.PrintJob job =
                             pm.print("GEL_Service_Report", adapter, attrs);
@@ -2756,7 +2759,15 @@ private String buildHtmlReport(String report) {
             return;
         }
 
-        txtPreview.setText(data.replaceAll("\\n{3,}", "\n\n"));
+        if (remoteReport != null) {
+            android.text.SpannableStringBuilder preview = new android.text.SpannableStringBuilder();
+            for (GELServiceLog.PdfRow row : remoteReport.rows) {
+                GELServiceUi.appendDiagnosticRow(preview, row);
+            }
+            txtPreview.setText(preview);
+        } else {
+            txtPreview.setText(data.replaceAll("\\n{3,}", "\n\n"));
+        }
     }
 
 

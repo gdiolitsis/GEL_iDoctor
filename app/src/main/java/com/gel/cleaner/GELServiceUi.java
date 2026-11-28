@@ -6,6 +6,9 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.Window;
 import android.view.WindowManager;
@@ -86,6 +89,37 @@ final class GELServiceUi {
             window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         }
         return dialog;
+    }
+
+    static void appendDiagnosticRow(SpannableStringBuilder buffer, GELServiceLog.PdfRow row) {
+        int start = buffer.length();
+        buffer.append(row.text);
+        int end = buffer.length();
+        if (row.valueColor != null) {
+            int valueStart = row.valueStart;
+            if (valueStart < 0) {
+                int separator = row.text.indexOf(':');
+                if (separator >= 0) valueStart = separator + 1;
+            }
+            if (valueStart >= 0 && valueStart < row.text.length()) {
+                buffer.setSpan(new ForegroundColorSpan(Color.parseColor(row.valueColor)),
+                        start + valueStart, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        } else {
+            int severityColor = explicitSeverityColor(row.text);
+            if (severityColor != Color.WHITE) {
+                buffer.setSpan(new ForegroundColorSpan(severityColor),
+                        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+        buffer.append('\n');
+    }
+
+    private static int explicitSeverityColor(String line) {
+        if (line.startsWith("✔ ")) return 0xFF39FF14;
+        if (line.startsWith("⚠ ")) return 0xFFFFD966;
+        if (line.startsWith("✖ ")) return 0xFFFF5555;
+        return Color.WHITE;
     }
 
     private static int dp(Context context, int value) {

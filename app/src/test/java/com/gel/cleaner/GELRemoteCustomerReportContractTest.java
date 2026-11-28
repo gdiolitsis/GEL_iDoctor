@@ -65,6 +65,26 @@ public final class GELRemoteCustomerReportContractTest {
         assertFalse(viewer.contains("GELRemoteAssistActivity.class"));
     }
 
+    @Test public void customerScreensAndColourPdfUseSourceStyles() throws Exception {
+        String viewer = source("GELReadOnlyDiagnosticsActivity.java");
+        String report = source("ServiceReportActivity.java");
+        assertTrue(viewer.contains("GELRemoteServiceReportLoader.diagnosticStyles(doc, lines)"));
+        assertTrue(viewer.contains("GELServiceUi.appendDiagnosticRow(buffer,"));
+        assertTrue(report.contains("GELServiceUi.appendDiagnosticRow(preview, row)"));
+        assertTrue(report.contains("setColorMode(android.print.PrintAttributes.COLOR_MODE_COLOR)"));
+    }
+
+    @Test public void remoteValueStyleKeepsItsOriginalTextAndBoundary() {
+        GELServiceLog.PdfRow row = GELServiceLog.detachedPdfRow("Result: OK", "#39FF14", 8);
+        assertEquals("Result: OK", row.text);
+        assertEquals("#39FF14", row.valueColor);
+        assertEquals("OK", row.text.substring(row.valueStart));
+
+        GELServiceLog.PdfRow invalid = GELServiceLog.detachedPdfRow("Result: unknown", "green", 999);
+        assertNull(invalid.valueColor);
+        assertEquals(-1, invalid.valueStart);
+    }
+
     @Test public void giftedTechnicianCanOpenAndExportCustomerReport() throws Exception {
         String viewer = source("GELReadOnlyDiagnosticsActivity.java");
         String loader = source("GELRemoteServiceReportLoader.java");

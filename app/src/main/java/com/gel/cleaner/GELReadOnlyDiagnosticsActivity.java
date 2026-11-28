@@ -7,6 +7,7 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.SpannableStringBuilder;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -175,18 +176,22 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
                         return;
                     }
                     if (snapshot == null || snapshot.isEmpty()) return;
-                    StringBuilder buffer = new StringBuilder();
+                    SpannableStringBuilder buffer = new SpannableStringBuilder();
                     for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                        Object lines = doc.get("lines");
-                        if (!(lines instanceof List<?>)) continue;
-                        for (Object line : (List<?>) lines) {
-                            if (line instanceof String) {
-                                buffer.append((String) line).append('\n');
+                        Object rawLines = doc.get("lines");
+                        if (!(rawLines instanceof List<?>)) continue;
+                        List<?> lines = (List<?>) rawLines;
+                        List<?> styles = GELRemoteServiceReportLoader.diagnosticStyles(doc, lines);
+                        for (int i = 0; i < lines.size(); i++) {
+                            if (lines.get(i) instanceof String) {
+                                GELServiceUi.appendDiagnosticRow(buffer,
+                                        GELRemoteServiceReportLoader.diagnosticRow((String) lines.get(i), styles, i));
                             }
                         }
                     }
                     if (buffer.length() > 0) {
-                        logText.setText(buffer.toString());
+                        logText.setText(buffer);
+                        status.setTextColor(0xFF39FF14);
                         status.setText(AppLang.isGreek(this)
                                 ? "● Λήψη διαγνωστικών αποτελεσμάτων — μόνο ανάγνωση"
                                 : "● Receiving diagnostic results — read only");
