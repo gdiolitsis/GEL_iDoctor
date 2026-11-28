@@ -48,4 +48,18 @@ public final class ServiceReportHtmlPdfPrintContextContractTest {
         assertTrue(t.contains("lockExportUI(false)"));
         assertTrue(t.contains("Επιλέξτε «Αποθήκευση ως PDF»"));
     }
+
+    @Test public void returningFromPrintingOffersToShareOnlyAUserSelectedPdf() throws Exception {
+        String t = source();
+        int onResume = t.indexOf("protected void onResume()");
+        int prompt = t.indexOf("showShareSavedHtmlPdf();", onResume);
+        int print = t.indexOf("pm.print(\"GEL_Service_Report\", adapter, attrs)");
+        int offer = t.indexOf("offerHtmlShareOnReturn = true;", print);
+        assertTrue(onResume >= 0 && prompt > onResume && prompt < print && offer > print);
+        assertTrue(t.contains("savedInstanceState.getBoolean(STATE_OFFER_HTML_SHARE)"));
+        assertTrue(t.contains("new ActivityResultContracts.OpenDocument()"));
+        assertTrue(t.contains("if (uri != null) sharePdf(uri);"));
+        assertTrue(t.contains("savedHtmlPdfPicker.launch(new String[]{\"application/pdf\"})"));
+        assertTrue(t.contains("ClipData.newRawUri(\"GEL Service Report\", uri)"));
+    }
 }

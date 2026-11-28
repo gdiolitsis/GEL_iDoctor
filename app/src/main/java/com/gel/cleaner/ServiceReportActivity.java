@@ -3,6 +3,7 @@
 
 package com.gel.cleaner;
 import android.app.AlertDialog;
+import android.content.ClipData;
 import android.content.ContentValues;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -38,6 +39,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
@@ -76,6 +79,12 @@ public class ServiceReportActivity extends GELAutoActivityHook {
             new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable htmlPrintTimeout;
     private boolean htmlPrintRequested;
+    private static final String STATE_OFFER_HTML_SHARE = "gel_offer_html_share";
+    private boolean offerHtmlShareOnReturn;
+    private final ActivityResultLauncher<String[]> savedHtmlPdfPicker =
+            registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri != null) sharePdf(uri);
+            });
     private Runnable reportAuthorisationTimeout;
 
     // STEP 2 — billing/report entitlement bridge.
@@ -163,6 +172,8 @@ public class ServiceReportActivity extends GELAutoActivityHook {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        offerHtmlShareOnReturn = savedInstanceState != null
+                && savedInstanceState.getBoolean(STATE_OFFER_HTML_SHARE);
 
         remoteSessionId = getIntent() != null
                 ? getIntent().getStringExtra(GELRemoteServiceReportLoader.EXTRA_SESSION_ID)
@@ -274,7 +285,7 @@ if (AppLang.isGreek(this)) {
     );
     btnHtml.setText(
             (isGelProActive() ? "" : "🔒 ")
-                    + "PRO  HTML PDF (Αποθήκευση)"
+                    + "PRO  HTML PDF (Αποθήκευση & Κοινοποίηση)"
     );
 } else {
     btnTxt.setText(
@@ -283,7 +294,7 @@ if (AppLang.isGreek(this)) {
     );
     btnHtml.setText(
             (isGelProActive() ? "" : "🔒 ")
-                    + "PRO  HTML PDF (Save)"
+                    + "PRO  HTML PDF (Save & Share)"
     );
 }
 
@@ -943,6 +954,34 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         updatePreview();
         if (billingManager != null) billingManager.refreshPurchases();
         if (proLogoPreview != null) refreshProfessionalLogoPreview();
+        if (offerHtmlShareOnReturn && !isFinishing()) {
+            offerHtmlShareOnReturn = false;
+            showShareSavedHtmlPdf();
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(STATE_OFFER_HTML_SHARE, offerHtmlShareOnReturn);
+    }
+
+    private void showShareSavedHtmlPdf() {
+        boolean gr = AppLang.isGreek(this);
+        GELServiceUi.confirmation(this,
+                gr ? "Κοινοποίηση HTML PDF" : "Share HTML PDF",
+                gr ? "Αν αποθηκεύσατε την αναφορά ως PDF, επιλέξτε το αρχείο για κοινοποίηση."
+                   : "If you saved the report as a PDF, select the saved file to share it.",
+                gr ? "Όχι τώρα" : "Not now",
+                gr ? "Επιλογή PDF" : "Select PDF",
+                false, () -> {
+                    try {
+                        savedHtmlPdfPicker.launch(new String[]{"application/pdf"});
+                    } catch (android.content.ActivityNotFoundException e) {
+                        Toast.makeText(this, gr ? "Δεν βρέθηκε εφαρμογή επιλογής αρχείων."
+                                : "No file picker is available.", Toast.LENGTH_LONG).show();
+                    }
+                }).show();
     }
 
 
@@ -2319,8 +2358,9 @@ private void exportHtmlPdf(String report) {
                             pm.print("GEL_Service_Report", adapter, attrs);
                     if (job == null) throw new IllegalStateException("Print job not created");
 
-                    // This confirms only that the system print UI was requested.
-                    // Saving/cancelling is controlled by the user in Android.
+                    // The print activity keeps the saved file URI. On return,
+                    // let the user select the PDF rather than assuming it was saved.
+                    offerHtmlShareOnReturn = true;
                     lockExportUI(false);
                     Toast.makeText(ServiceReportActivity.this,
                             gr ? "Επιλέξτε «Αποθήκευση ως PDF» στο παράθυρο εκτύπωσης."
@@ -3182,9 +3222,8 @@ private void sharePdf(Uri uri) {
             uri
     );
 
-    intent.addFlags(
-            Intent.FLAG_GRANT_READ_URI_PERMISSION
-    );
+    intent.setClipData(ClipData.newRawUri("GEL Service Report", uri));
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
     try {
 
