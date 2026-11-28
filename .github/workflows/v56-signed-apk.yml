@@ -148,3 +148,15 @@ jobs:
           path: ${{ runner.temp }}/candidate-apk
           if-no-files-found: error
           retention-days: 7
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          path: ${{ runner.temp }}/candidate-apk/GEL_iDoctor_v56_updated_signed.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          path: ${{ runner.temp }}/candidate-apk/GEL_iDoctor_v56_signed.aab
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
