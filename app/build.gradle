@@ -29,11 +29,10 @@ android {
         minSdk = 26
         targetSdk = 36
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
-        // Public-facing v55 (5.4) uses monotonically increasing
-        // versionCode 81 for the next release after the v54 AAB (code 80).
+        // v56 upgrades the v55 APK and AAB (code 81).
         // Version overrides remain available to CI if a later code is needed.
-        versionCode = (project.findProperty('gelQaVersionCode') ?: '81').toString().toInteger()
-        versionName = (project.findProperty('gelQaVersionName') ?: '5.5').toString()
+        versionCode = (project.findProperty('gelQaVersionCode') ?: '82').toString().toInteger()
+        versionName = (project.findProperty('gelQaVersionName') ?: '5.6').toString()
 
 // ✅ SINGLE SOURCE OF ABI TRUTH
         ndk {

@@ -490,7 +490,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
     private String reportIdentity() {
         // Bind a credit to the report content and professional profile, not each save attempt.
-        String content = txtPreview == null ? "" : txtPreview.getText().toString();
+        String content = reportSourceText();
+        if (remoteSessionId == null) content = content.replaceAll("\\n{3,}", "\n\n");
         String profile = new java.util.TreeMap<>(getSharedPreferences(PRO_PROFILE_PREFS, MODE_PRIVATE).getAll()).toString();
         try {
             byte[] hash = java.security.MessageDigest.getInstance("SHA-256")
@@ -1964,6 +1965,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         try {
             String text = reportSourceText();
             String[] lines = text.split("\\n+");
+            boolean[] visibleLines = GELServiceReportLinePolicy.visibleMask(lines);
             // Same source-grounded value colors as the HTML export.
             java.util.List<GELServiceLog.PdfRow> pdfRows = reportSourceRows();
             int rowIndex = 0;
@@ -2002,8 +2004,20 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                     true
             );
 
-            for (String line : lines) {
-                String cleanLine = (line == null) ? "" : line.trim();
+            for (int reportLineIndex = 0; reportLineIndex < lines.length; reportLineIndex++) {
+                String cleanLine = lines[reportLineIndex] == null
+                        ? "" : lines[reportLineIndex].trim();
+
+                // Skip presentation-only dividers, but consume their original
+                // PDF row so the subsequent evidence colors stay aligned.
+                if (!visibleLines[reportLineIndex]) {
+                    if (!cleanLine.isEmpty()) {
+                        while (rowIndex < pdfRows.size()
+                                && pdfRows.get(rowIndex).text.trim().isEmpty()) rowIndex++;
+                        if (rowIndex < pdfRows.size()) rowIndex++;
+                    }
+                    continue;
+                }
 
                 if (cleanLine.isEmpty()) {
                     y += lineHeight / 2;
@@ -2423,7 +2437,8 @@ private static String pdfValueCssClass(String screenColor) {
 
 private String buildHtmlReport(String report) {
 
-    String[] lines = report.split("\\n");
+    String[] lines = report.split("\\n", -1);
+    boolean[] visibleLines = GELServiceReportLinePolicy.visibleMask(lines);
     StringBuilder body = new StringBuilder();
 
     // Preserve the exact per-value coloring captured when each Lab emitted
@@ -2487,9 +2502,21 @@ private String buildHtmlReport(String report) {
     // =========================================================
     // BODY LOGS
     // =========================================================
-    for (String raw : lines) {
+    for (int reportLineIndex = 0; reportLineIndex < lines.length; reportLineIndex++) {
 
+        String raw = lines[reportLineIndex];
         String line = raw == null ? "" : raw.trim();
+
+        // The metadata list describes the ORIGINAL log, not the rendered
+        // one. Advance it even when hiding an orphan/repeated divider.
+        if (!visibleLines[reportLineIndex]) {
+            if (!line.isEmpty()) {
+                while (pdfRowIndex < pdfRows.size()
+                        && pdfRows.get(pdfRowIndex).text.trim().isEmpty()) pdfRowIndex++;
+                if (pdfRowIndex < pdfRows.size()) pdfRowIndex++;
+            }
+            continue;
+        }
 
         if (line.isEmpty()) {
             body.append("<div class='space'></div>");
@@ -2750,13 +2777,18 @@ private String buildHtmlReport(String report) {
         }
 
         if (remoteReport != null) {
+            String[] lines = data.split("\\n");
+            boolean[] visible = GELServiceReportLinePolicy.visibleMask(lines);
             android.text.SpannableStringBuilder preview = new android.text.SpannableStringBuilder();
-            for (GELServiceLog.PdfRow row : remoteReport.rows) {
-                GELServiceUi.appendDiagnosticRow(preview, row);
+            for (int i = 0; i < remoteReport.rows.size(); i++) {
+                if (visible[i]) {
+                    GELServiceLog.PdfRow row = remoteReport.rows.get(i);
+                    GELServiceUi.appendDiagnosticRow(preview, row);
+                }
             }
             txtPreview.setText(preview);
         } else {
-            txtPreview.setText(data.replaceAll("\\n{3,}", "\n\n"));
+            txtPreview.setText(GELServiceReportLinePolicy.cleanPreview(data));
         }
     }
 
@@ -3062,7 +3094,7 @@ private String buildHtmlReport(String report) {
                     Toast.LENGTH_LONG).show();
             return null;
         }
-        String report = txtPreview.getText().toString();
+        String report = reportSourceText();
 
         if (report == null
                 || report.trim().isEmpty()

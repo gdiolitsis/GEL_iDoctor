@@ -71,6 +71,7 @@ public final class GELRemoteCustomerReportContractTest {
         assertTrue(viewer.contains("GELRemoteServiceReportLoader.diagnosticStyles(doc, lines)"));
         assertTrue(viewer.contains("GELServiceUi.appendDiagnosticRow(buffer,"));
         assertTrue(report.contains("GELServiceUi.appendDiagnosticRow(preview, row)"));
+        assertTrue(report.contains("String report = reportSourceText();"));
         assertTrue(report.contains("setColorMode(android.print.PrintAttributes.COLOR_MODE_COLOR)"));
     }
 
