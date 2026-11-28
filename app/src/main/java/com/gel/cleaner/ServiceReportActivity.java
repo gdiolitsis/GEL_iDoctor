@@ -1603,48 +1603,15 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         title.setPadding(0, 0, 0, dp(12));
         card.addView(title);
 
-        TextView firstLabel = previewText(
-                gr ? "Πρώτη σελίδα" : "First page",
-                12f,
-                Color.WHITE,
-                true
+        ImageView reportPreview = new ImageView(this);
+        reportPreview.setImageResource(R.drawable.gel_report_preview);
+        reportPreview.setAdjustViewBounds(true);
+        reportPreview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        reportPreview.setContentDescription(
+                gr ? "Δείγμα επαγγελματικής αναφοράς GEL Service Report"
+                   : "Sample professional GEL Service Report"
         );
-        firstLabel.setGravity(Gravity.CENTER);
-        firstLabel.setPadding(0, 0, 0, dp(6));
-        card.addView(firstLabel);
-
-        ImageView firstPage = new ImageView(this);
-        firstPage.setImageResource(R.drawable.gel_report_preview_first);
-        firstPage.setAdjustViewBounds(true);
-        firstPage.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        firstPage.setContentDescription(
-                gr ? "Προεπισκόπηση πρώτης σελίδας GEL Service Report"
-                   : "GEL Service Report first page preview"
-        );
-        card.addView(firstPage, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
-
-        TextView finalLabel = previewText(
-                gr ? "Τελική σελίδα" : "Final page",
-                12f,
-                Color.WHITE,
-                true
-        );
-        finalLabel.setGravity(Gravity.CENTER);
-        finalLabel.setPadding(0, dp(14), 0, dp(6));
-        card.addView(finalLabel);
-
-        ImageView finalPage = new ImageView(this);
-        finalPage.setImageResource(R.drawable.gel_report_preview_final);
-        finalPage.setAdjustViewBounds(true);
-        finalPage.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        finalPage.setContentDescription(
-                gr ? "Προεπισκόπηση τελικής σελίδας GEL Service Report"
-                   : "GEL Service Report final page preview"
-        );
-        card.addView(finalPage, new LinearLayout.LayoutParams(
+        card.addView(reportPreview, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
