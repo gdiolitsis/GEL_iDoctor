@@ -156,13 +156,16 @@ public final class GELReadOnlyDiagnosticsActivity extends GELAutoActivityHook {
         }
     }
 
-    private void attachLogs() {
-        stopListening();
-        logsListener = FirebaseFirestore.getInstance()
-                .collection("service_sessions").document(sessionId)
+    static Query recentDiagnostics(FirebaseFirestore firestore, String sessionId) {
+        return firestore.collection("service_sessions").document(sessionId)
                 .collection("diagnostics")
                 .orderBy("createdAt", Query.Direction.ASCENDING)
-                .limitToLast(150)
+                .limitToLast(150);
+    }
+
+    private void attachLogs() {
+        stopListening();
+        logsListener = recentDiagnostics(FirebaseFirestore.getInstance(), sessionId)
                 .addSnapshotListener((snapshot, error) -> {
                     if (!isLive()) {
                         stopListening();
