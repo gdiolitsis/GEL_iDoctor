@@ -81,7 +81,7 @@ public class ServiceReportActivity extends GELAutoActivityHook {
     private boolean htmlPrintRequested;
     private static final String STATE_OFFER_HTML_SHARE = "gel_offer_html_share";
     private boolean offerHtmlShareOnReturn;
-    private final ActivityResultLauncher<String[]> savedHtmlPdfPicker =
+    private final ActivityResultLauncher<String[]> savedReportPdfPicker =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri != null) sharePdf(uri);
             });
@@ -382,6 +382,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     // STEP 2 — REPORT BILLING / ENTITLEMENT GATE
     // ============================================================
     private boolean pendingHtmlExport = false;
+    private boolean pendingBlankFormExport;
     private boolean pendingProReportExport = false;
 
     private int reportBrandingChoice = 0; // 0 GEL, 1 single report, 2 unlimited
@@ -404,6 +405,11 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
             return;
         }
         pendingHtmlExport = html;
+        pendingBlankFormExport = false;
+        if (remoteSessionId == null && reportSourceEmpty()) {
+            showEmptyReportOptionsDialog(true);
+            return;
+        }
         showPersonalisedReportPurchaseDialog();
     }
 
@@ -486,8 +492,13 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     private void continuePreparedExport() {
+        if (pendingBlankFormExport) {
+            pendingBlankFormExport = false;
+            exportBlankServiceFormPdf();
+            return;
+        }
         if (!remoteReportAllowed() || reportSourceEmpty()) {
-            if (remoteSessionId == null) showEmptyReportOptionsDialog();
+            if (remoteSessionId == null) showEmptyReportOptionsDialog(false);
             else Toast.makeText(this, AppLang.isGreek(this)
                     ? "Δεν υπάρχουν διαθέσιμα διαγνωστικά από τον πελάτη."
                     : "No customer diagnostics available.", Toast.LENGTH_LONG).show();
@@ -655,9 +666,9 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     // ============================================================
-    // EMPTY REPORT FLOW — offer a printable blank two-page form
+    // EMPTY REPORT FLOW
     // ============================================================
-    private void showEmptyReportOptionsDialog() {
+    private void showEmptyReportOptionsDialog(boolean needsBlankFormSetup) {
 
         final boolean gr = AppLang.isGreek(this);
 
@@ -682,14 +693,9 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         TextView message = new TextView(this);
         message.setText(gr
-                ? "Δεν έχει εκτελεστεί ακόμη κάποιο εργαστήριο, επομένως δεν υπάρχουν "
-                  + "διαγνωστικά αποτελέσματα για εξαγωγή.\n\n"
-                  + "Θέλεις να δημιουργήσεις μια κενή φόρμα Service Report με την πρώτη "
-                  + "και την τελευταία σελίδα, ώστε να τη συμπληρώσεις χειρόγραφα;"
-                : "No diagnostic lab has been run yet, so there are no diagnostic results "
-                  + "to export.\n\n"
-                  + "Would you like to create a blank Service Report containing the first "
-                  + "and final pages, ready to be completed by hand?");
+                ? "Μπορείτε να δημιουργήσετε μια κενή φόρμα για χειρόγραφη συμπλήρωση "
+                  + "ή να κοινοποιήσετε ένα αποθηκευμένο PDF."
+                : "Create a blank form to fill in by hand, or share a saved PDF.");
         message.setTextColor(0xFF00FF9C);
         message.setTextSize(14f);
         message.setLineSpacing(0f, 1.18f);
@@ -704,6 +710,12 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                 0xFF0F8A3B
         );
 
+        Button shareSaved = gelButton(
+                this,
+                gr ? "ΚΟΙΝΟΠΟΙΗΣΗ ΑΠΟΘΗΚΕΥΜΕΝΟΥ PDF" : "SHARE SAVED PDF",
+                0xFF0F8A3B
+        );
+
         Button cancel = gelButton(
                 this,
                 gr ? "ΑΚΥΡΟ" : "CANCEL",
@@ -711,9 +723,12 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         );
 
         root.addView(createBlank);
+        root.addView(shareSaved);
         root.addView(cancel);
 
-        builder.setView(root);
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(root);
+        builder.setView(scroll);
         final AlertDialog dialog = builder.create();
 
         cancel.setOnClickListener(v -> { finishSingleReport(false); dialog.dismiss(); });
@@ -721,7 +736,17 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         createBlank.setOnClickListener(v -> {
             dialog.dismiss();
-            exportBlankServiceFormPdf();
+            if (needsBlankFormSetup) {
+                pendingBlankFormExport = true;
+                showPersonalisedReportPurchaseDialog();
+            } else {
+                exportBlankServiceFormPdf();
+            }
+        });
+        shareSaved.setOnClickListener(v -> {
+            finishSingleReport(false);
+            dialog.dismiss();
+            pickSavedReportPdf();
         });
 
         dialog.show();
@@ -974,14 +999,17 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                    : "If you saved the report as a PDF, select the saved file to share it.",
                 gr ? "Όχι τώρα" : "Not now",
                 gr ? "Επιλογή PDF" : "Select PDF",
-                false, () -> {
-                    try {
-                        savedHtmlPdfPicker.launch(new String[]{"application/pdf"});
-                    } catch (android.content.ActivityNotFoundException e) {
-                        Toast.makeText(this, gr ? "Δεν βρέθηκε εφαρμογή επιλογής αρχείων."
-                                : "No file picker is available.", Toast.LENGTH_LONG).show();
-                    }
-                }).show();
+                false, this::pickSavedReportPdf).show();
+    }
+
+    private void pickSavedReportPdf() {
+        try {
+            savedReportPdfPicker.launch(new String[]{"application/pdf"});
+        } catch (android.content.ActivityNotFoundException e) {
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Δεν βρέθηκε εφαρμογή επιλογής αρχείων."
+                    : "No file picker is available.", Toast.LENGTH_LONG).show();
+        }
     }
 
 
@@ -1992,7 +2020,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         if (!remoteReportAllowed() || reportSourceEmpty()) {
             runOnUiThread(() -> {
-                if (remoteSessionId == null) showEmptyReportOptionsDialog();
+                if (remoteSessionId == null) showEmptyReportOptionsDialog(false);
                 else Toast.makeText(this, AppLang.isGreek(this)
                         ? "Δεν υπάρχουν διαθέσιμα διαγνωστικά πελάτη."
                         : "No customer diagnostic data available.",
@@ -3114,7 +3142,7 @@ private String buildHtmlReport(String report) {
                 exportProgress.setVisibility(View.GONE);
             }
 
-            showEmptyReportOptionsDialog();
+            showEmptyReportOptionsDialog(false);
             return null;
         }
 

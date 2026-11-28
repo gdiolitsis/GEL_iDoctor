@@ -59,7 +59,20 @@ public final class ServiceReportHtmlPdfPrintContextContractTest {
         assertTrue(t.contains("savedInstanceState.getBoolean(STATE_OFFER_HTML_SHARE)"));
         assertTrue(t.contains("new ActivityResultContracts.OpenDocument()"));
         assertTrue(t.contains("if (uri != null) sharePdf(uri);"));
-        assertTrue(t.contains("savedHtmlPdfPicker.launch(new String[]{\"application/pdf\"})"));
+        assertTrue(t.contains("savedReportPdfPicker.launch(new String[]{\"application/pdf\"})"));
         assertTrue(t.contains("ClipData.newRawUri(\"GEL Service Report\", uri)"));
+    }
+
+    @Test public void emptyLocalReportOffersFileSharingBeforeReportPurchase() throws Exception {
+        String t = source();
+        int start = t.indexOf("private void beginReportExport(boolean html)");
+        int emptyOptions = t.indexOf("showEmptyReportOptionsDialog(true);", start);
+        int purchase = t.indexOf("showPersonalisedReportPurchaseDialog();", start);
+        assertTrue(start >= 0 && emptyOptions > start && emptyOptions < purchase);
+        int dialog = t.indexOf("private void showEmptyReportOptionsDialog(boolean needsBlankFormSetup)");
+        int share = t.indexOf("shareSaved.setOnClickListener", dialog);
+        int release = t.indexOf("finishSingleReport(false);", share);
+        int pick = t.indexOf("pickSavedReportPdf();", share);
+        assertTrue(dialog >= 0 && share > dialog && release > share && pick > release);
     }
 }
