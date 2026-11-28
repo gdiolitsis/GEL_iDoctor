@@ -261,6 +261,7 @@ public class ServiceReportActivity extends GELAutoActivityHook {
 
         LinearLayout line = new LinearLayout(this);
         line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setBaselineAligned(false);
 
 btnTxt = new GelButton(this);
 btnHtml = new GelButton(this);
@@ -298,7 +299,7 @@ btnTxt.setMinimumHeight(dp(72));
 
 LinearLayout.LayoutParams lpTxt =
         new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                LinearLayout.LayoutParams.MATCH_PARENT, 1f);
 lpTxt.setMargins(0, 0, dp(8), 0);
 btnTxt.setLayoutParams(lpTxt);
 btnTxt.setPadding(dp(12), dp(12), dp(12), dp(12));
@@ -315,7 +316,7 @@ btnHtml.setMinimumHeight(dp(72));
 
 LinearLayout.LayoutParams lpHtml =
         new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                LinearLayout.LayoutParams.MATCH_PARENT, 1f);
 lpHtml.setMargins(dp(8), 0, 0, 0);
 btnHtml.setLayoutParams(lpHtml);
 btnHtml.setPadding(dp(12), dp(12), dp(12), dp(12));
@@ -352,6 +353,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                     ? "ΑΝΑΝΕΩΣΗ ΔΙΑΓΝΩΣΤΙΚΩΝ ΠΕΛΑΤΗ"
                     : "REFRESH CUSTOMER DIAGNOSTICS");
             reloadCustomer.setAllCaps(false);
+            GELServiceUi.styleButton(reloadCustomer, R.drawable.gel_btn_green_gold, Color.BLACK);
             reloadCustomer.setOnClickListener(v ->
                     GELServiceSubscriptionGate.requireTechnicianAccess(this, this::loadCustomerReport));
             root.addView(reloadCustomer);

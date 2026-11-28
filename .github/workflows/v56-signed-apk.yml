@@ -1,4 +1,4 @@
-name: v56 — signed GEL iDoctor APK
+name: v56 — signed GEL iDoctor APK and AAB
 on:
   push:
     branches: [release/v56-service-report]
@@ -58,7 +58,7 @@ jobs:
             echo "Unexpected Shizuku runtime source in no-Shizuku QA build" >&2
             exit 1
           fi
-      - name: Build, align, sign and verify the v56 release APK
+      - name: Build and verify the signed v56 APK and AAB
         env:
           GH_TOKEN: ${{ github.token }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -73,7 +73,7 @@ jobs:
           attempt=1
           while true; do
             log="$RUNNER_TEMP/gel-gradle-qa-$attempt.log"
-            if ./gradlew :app:testDebugUnitTest :app:assembleRelease --no-daemon --console=plain 2>&1 | tee "$log"; then break; fi
+            if ./gradlew :app:testDebugUnitTest :app:assembleRelease :app:bundleRelease --no-daemon --console=plain 2>&1 | tee "$log"; then break; fi
             if [ "$attempt" -ge 3 ] || ! grep -Eqi '(status code 429|HTTP 429|Too Many Requests|MavenArtifactFetcher|FileNotFoundException)' "$log"; then
               echo "Gradle failed; will not sign candidate" >&2
               exit 1
@@ -91,18 +91,18 @@ jobs:
             --ks "$RUNNER_TEMP/gel-qa-signing.jks" \
             --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_ALIAS_PASSWORD \
             --ks-key-alias "$KEY_ALIAS" \
-            --out "$out/GEL_iDoctor_v56_signed.apk" "$out/gel-v56-aligned.apk"
-          "$tools/apksigner" verify --verbose "$out/GEL_iDoctor_v56_signed.apk"
-          "$tools/zipalign" -c -v 4 "$out/GEL_iDoctor_v56_signed.apk"
+            --out "$out/GEL_iDoctor_v56_updated_signed.apk" "$out/gel-v56-aligned.apk"
+          "$tools/apksigner" verify --verbose "$out/GEL_iDoctor_v56_updated_signed.apk"
+          "$tools/zipalign" -c -v 4 "$out/GEL_iDoctor_v56_updated_signed.apk"
           expected='73b2c36144a1c814c92fea0ee71a6be408c2f111db20bddea24f95ad958b0964'
-          actual="$("$tools/apksigner" verify --print-certs "$out/GEL_iDoctor_v56_signed.apk" \
+          actual="$("$tools/apksigner" verify --print-certs "$out/GEL_iDoctor_v56_updated_signed.apk" \
             | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}')"
           if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then
             echo "SIGNED_APK_CERTIFICATE_MISMATCH_OR_UNREADABLE" >&2
             exit 1
           fi
           echo "SIGNED_APK_CERTIFICATE=PASS"
-          "$tools/aapt2" dump badging "$out/GEL_iDoctor_v56_signed.apk" > "$out/APK_BADGING.txt"
+          "$tools/aapt2" dump badging "$out/GEL_iDoctor_v56_updated_signed.apk" > "$out/APK_BADGING.txt"
           package_line="$(head -n 1 "$out/APK_BADGING.txt")"
           echo "APK_BADGING_PACKAGE_LINE: $package_line"
           [[ "$package_line" == package:* ]] || { echo "INVALID_BADGING"; exit 1; }
@@ -115,13 +115,36 @@ jobs:
           [[ "$version_name" == '5.6' ]] || { echo "INVALID_V56_VERSION_NAME: $version_name"; exit 1; }
           echo "V56_PACKAGE_VERSION: $code $version_name"
           echo "APK_PACKAGE_VERSION=PASS"
-          (cd "$out" && sha256sum GEL_iDoctor_v56_signed.apk > SHA256SUMS)
+          bundle="$out/GEL_iDoctor_v56_signed.aab"
+          cp app/build/outputs/bundle/release/app-release.aab "$bundle"
+          jarsigner -keystore "$RUNNER_TEMP/gel-qa-signing.jks" \
+            -storepass:env KEYSTORE_PASSWORD -keypass:env KEY_ALIAS_PASSWORD \
+            "$bundle" "$KEY_ALIAS"
+          LC_ALL=C jarsigner -verify "$bundle" | tee "$out/AAB_SIGNATURE.txt"
+          grep -Fx 'jar verified.' "$out/AAB_SIGNATURE.txt"
+          aab_cert="$(LC_ALL=C keytool -printcert -jarfile "$bundle" \
+            | awk '/SHA256:/ {gsub(/:/,"",$2); print tolower($2); exit}')"
+          test "$aab_cert" = "$expected"
+          printf '%s\n' "$aab_cert" > "$out/AAB_SIGNER_CERT_SHA256"
+
+          curl --fail --location --retry 4 \
+            'https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar' \
+            --output "$RUNNER_TEMP/bundletool.jar"
+          printf '%s  %s\n' 'a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29' \
+            "$RUNNER_TEMP/bundletool.jar" | sha256sum --check
+          java -jar "$RUNNER_TEMP/bundletool.jar" validate --bundle="$bundle"
+          java -jar "$RUNNER_TEMP/bundletool.jar" dump manifest --bundle="$bundle" \
+            > "$out/AAB_MANIFEST.xml"
+          python3 tools/ci/verify_release_manifest.py "$out/AAB_MANIFEST.xml" 82 5.6
+          echo "SIGNED_AAB_VERIFIED=PASS"
+          (cd "$out" && sha256sum GEL_iDoctor_v56_updated_signed.apk GEL_iDoctor_v56_signed.aab > SHA256SUMS)
           git rev-parse HEAD > "$out/SOURCE_COMMIT"
           printf '%s\n' "$actual" > "$out/SIGNER_CERT_SHA256"
           rm -f "$out/gel-v56-aligned.apk" "$RUNNER_TEMP/gel-qa-signing.jks"
           echo "SIGNED_QA_UPDATE_WITH_INSTALLED_CERTIFICATE=PASS"
       - uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v56_signed_APK
+          name: GEL_iDoctor_v56_signed_APK_and_AAB
           path: ${{ runner.temp }}/candidate-apk
+          if-no-files-found: error
           retention-days: 7
